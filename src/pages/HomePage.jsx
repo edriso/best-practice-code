@@ -52,6 +52,13 @@ const colorMap = {
     hoverText: 'group-hover:text-orange-400',
     badge: 'bg-orange-500/10 text-orange-400',
   },
+  teal: {
+    iconBg: 'bg-teal-500/10',
+    iconText: 'text-teal-400',
+    hoverBorder: 'hover:border-teal-500/50',
+    hoverText: 'group-hover:text-teal-400',
+    badge: 'bg-teal-500/10 text-teal-400',
+  },
 }
 
 function HomePage() {

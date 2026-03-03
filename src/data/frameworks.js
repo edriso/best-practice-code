@@ -1,4 +1,4 @@
-import { Server, Atom, Layers, Braces, Paintbrush, FileCode } from 'lucide-react'
+import { Server, Atom, Layers, Braces, Paintbrush, FileCode, Database } from 'lucide-react'
 
 const frameworks = [
   {
@@ -42,6 +42,13 @@ const frameworks = [
     description: 'Semantic elements, accessibility, forms, meta tags, and structured markup',
     icon: FileCode,
     color: 'orange',
+  },
+  {
+    id: 'databases',
+    name: 'Databases with Express.js',
+    description: 'SQL & NoSQL database patterns, ORMs, query builders, and connection management',
+    icon: Database,
+    color: 'teal',
   },
 ]
 

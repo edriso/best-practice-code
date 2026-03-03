@@ -46,6 +46,7 @@ src/
     javascript.js             # JavaScript & OOP content (12 sections)
     css.js                    # Advanced CSS content (12 sections)
     html.js                   # HTML Semantic content (10 sections)
+    databases.js              # Databases with Express.js content (12 sections)
 
   pages/
     HomePage.jsx              # Landing with framework cards

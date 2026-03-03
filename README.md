@@ -31,6 +31,7 @@ npm run build
 - **JavaScript & OOP** — 12 sections covering OOP classes, prototypes, closures, arrays, async/await, modules, MVC architecture, DOM manipulation, and error handling
 - **Advanced CSS** — 12 sections covering Sass 7-1 architecture, BEM naming, responsive design, Flexbox, CSS Grid, animations, clip-path, custom properties, and modern CSS features
 - **HTML Semantic** — 10 sections covering semantic elements, heading hierarchy, accessibility, forms, meta/SEO, images, lists/tables, UI patterns, performance, and structured data
+- **Databases with Express.js** — 12 sections covering SQL vs NoSQL, PostgreSQL, MySQL, SQLite, Supabase, Prisma, Sequelize, Knex.js, ORM comparison, SQL patterns, and MongoDB connections
 
 ## How to Add a New Framework
 
