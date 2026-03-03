@@ -27,6 +27,10 @@ npm run build
 
 - **Express.js** — 13 sections covering MVC setup, routing, middleware, error handling, auth, security, API features, and deployment
 - **React.js** — 13 sections covering component patterns, state management, hooks, routing, React Query, forms, Redux, performance, compound components, styling, and error handling
+- **MERN Stack** — 10 sections covering full-stack project structure, API design, auth flow, database design, error handling, file uploads, and deployment
+- **JavaScript & OOP** — 12 sections covering OOP classes, prototypes, closures, arrays, async/await, modules, MVC architecture, DOM manipulation, and error handling
+- **Advanced CSS** — 12 sections covering Sass 7-1 architecture, BEM naming, responsive design, Flexbox, CSS Grid, animations, clip-path, custom properties, and modern CSS features
+- **HTML Semantic** — 10 sections covering semantic elements, heading hierarchy, accessibility, forms, meta/SEO, images, lists/tables, UI patterns, performance, and structured data
 
 ## How to Add a New Framework
 

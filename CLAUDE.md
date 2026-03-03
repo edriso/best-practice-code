@@ -42,6 +42,10 @@ src/
     frameworks.js             # Registry: { id, name, description, icon, color }
     express.js                # Express.js content (13 sections)
     react.js                  # React.js content (13 sections)
+    mern.js                   # MERN Stack content (10 sections)
+    javascript.js             # JavaScript & OOP content (12 sections)
+    css.js                    # Advanced CSS content (12 sections)
+    html.js                   # HTML Semantic content (10 sections)
 
   pages/
     HomePage.jsx              # Landing with framework cards

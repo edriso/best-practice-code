@@ -24,6 +24,34 @@ const colorMap = {
     hoverText: 'group-hover:text-cyan-400',
     badge: 'bg-cyan-500/10 text-cyan-400',
   },
+  violet: {
+    iconBg: 'bg-violet-500/10',
+    iconText: 'text-violet-400',
+    hoverBorder: 'hover:border-violet-500/50',
+    hoverText: 'group-hover:text-violet-400',
+    badge: 'bg-violet-500/10 text-violet-400',
+  },
+  yellow: {
+    iconBg: 'bg-yellow-500/10',
+    iconText: 'text-yellow-400',
+    hoverBorder: 'hover:border-yellow-500/50',
+    hoverText: 'group-hover:text-yellow-400',
+    badge: 'bg-yellow-500/10 text-yellow-400',
+  },
+  pink: {
+    iconBg: 'bg-pink-500/10',
+    iconText: 'text-pink-400',
+    hoverBorder: 'hover:border-pink-500/50',
+    hoverText: 'group-hover:text-pink-400',
+    badge: 'bg-pink-500/10 text-pink-400',
+  },
+  orange: {
+    iconBg: 'bg-orange-500/10',
+    iconText: 'text-orange-400',
+    hoverBorder: 'hover:border-orange-500/50',
+    hoverText: 'group-hover:text-orange-400',
+    badge: 'bg-orange-500/10 text-orange-400',
+  },
 }
 
 function HomePage() {
