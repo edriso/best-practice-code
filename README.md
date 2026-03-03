@@ -7,7 +7,7 @@ A personal reference web app for quickly looking up best practices, folder struc
 - React 19 + Vite 7
 - Tailwind CSS v4
 - react-router-dom (client-side routing)
-- react-syntax-highlighter (code blocks with oneDark theme)
+- react-syntax-highlighter (code blocks with Atom One Dark theme)
 - lucide-react (icons)
 
 ## Getting Started
@@ -26,6 +26,7 @@ npm run build
 ## Current Frameworks
 
 - **Express.js** — 13 sections covering MVC setup, routing, middleware, error handling, auth, security, API features, and deployment
+- **React.js** — 13 sections covering component patterns, state management, hooks, routing, React Query, forms, Redux, performance, compound components, styling, and error handling
 
 ## How to Add a New Framework
 

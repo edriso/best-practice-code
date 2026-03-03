@@ -6,7 +6,7 @@ A personal reference web app — a "cheat sheet" site for quickly looking up bes
 
 - React 19 + Vite 7 + Tailwind CSS v4
 - react-router-dom (client-side routing)
-- react-syntax-highlighter (code blocks)
+- react-syntax-highlighter (code blocks, Atom One Dark theme)
 - lucide-react (icons)
 
 ## Architecture
@@ -39,8 +39,9 @@ src/
       ScrollToTop.jsx         # Scroll to top on route change
 
   data/
-    frameworks.js             # Registry: { id, name, path, icon }
+    frameworks.js             # Registry: { id, name, description, icon, color }
     express.js                # Express.js content (13 sections)
+    react.js                  # React.js content (13 sections)
 
   pages/
     HomePage.jsx              # Landing with framework cards

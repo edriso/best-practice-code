@@ -20,11 +20,17 @@ function FrameworkPage() {
     return <Navigate to="/404" replace />
   }
 
+  const Icon = framework.icon
+
   return (
     <DocLayout sections={data.sections}>
       <div className="mb-10">
-        <h1 className="text-3xl font-bold mb-2">{data.name}</h1>
+        <div className="flex items-center gap-3 mb-2">
+          <Icon size={28} className="text-gray-400" />
+          <h1 className="text-3xl font-bold">{data.name}</h1>
+        </div>
         <p className="text-gray-400">{data.description}</p>
+        <p className="text-sm text-gray-600 mt-1">{data.sections.length} sections</p>
       </div>
       {data.sections.map((section, index) => (
         <SectionRenderer key={section.id} section={section} index={index} />

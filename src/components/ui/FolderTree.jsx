@@ -56,7 +56,7 @@ function TreeNode({ node, depth = 0 }) {
 
 function FolderTree({ tree }) {
   return (
-    <div className="rounded-lg border border-gray-800 bg-gray-900/50 p-4 my-4 font-mono">
+    <div className="rounded-lg border border-[#3e4451] bg-[#282c34] p-4 my-4 font-mono">
       <TreeNode node={tree} />
     </div>
   )

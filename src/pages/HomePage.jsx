@@ -2,6 +2,30 @@ import { Link } from 'react-router-dom'
 import { Code } from 'lucide-react'
 import frameworks from '../data/frameworks'
 
+const dataModules = import.meta.glob('../data/*.js', { eager: true })
+
+function getSectionCount(id) {
+  const key = `../data/${id}.js`
+  return dataModules[key]?.default?.sections?.length || 0
+}
+
+const colorMap = {
+  emerald: {
+    iconBg: 'bg-emerald-500/10',
+    iconText: 'text-emerald-400',
+    hoverBorder: 'hover:border-emerald-500/50',
+    hoverText: 'group-hover:text-emerald-400',
+    badge: 'bg-emerald-500/10 text-emerald-400',
+  },
+  cyan: {
+    iconBg: 'bg-cyan-500/10',
+    iconText: 'text-cyan-400',
+    hoverBorder: 'hover:border-cyan-500/50',
+    hoverText: 'group-hover:text-cyan-400',
+    badge: 'bg-cyan-500/10 text-cyan-400',
+  },
+}
+
 function HomePage() {
   return (
     <main className="max-w-5xl mx-auto px-6 py-20">
@@ -23,16 +47,26 @@ function HomePage() {
       <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {frameworks.map((fw) => {
           const Icon = fw.icon
+          const colors = colorMap[fw.color] || colorMap.emerald
+          const sectionCount = getSectionCount(fw.id)
+
           return (
             <Link
               key={fw.id}
               to={`/${fw.id}`}
-              className="group block rounded-xl border border-gray-800 bg-gray-900 p-6 transition hover:border-emerald-500/50 hover:bg-gray-900/80"
+              className={`group block rounded-xl border border-gray-800 bg-gray-900 p-6 transition ${colors.hoverBorder} hover:bg-gray-900/80`}
             >
-              <div className="mb-4 inline-flex rounded-lg bg-emerald-500/10 p-3 text-emerald-400">
-                <Icon size={24} />
+              <div className="flex items-start justify-between mb-4">
+                <div className={`inline-flex rounded-lg ${colors.iconBg} p-3 ${colors.iconText}`}>
+                  <Icon size={24} />
+                </div>
+                {sectionCount > 0 && (
+                  <span className={`rounded-full ${colors.badge} px-2.5 py-0.5 text-xs font-medium`}>
+                    {sectionCount} sections
+                  </span>
+                )}
               </div>
-              <h3 className="text-xl font-semibold mb-2 group-hover:text-emerald-400 transition-colors">
+              <h3 className={`text-xl font-semibold mb-2 ${colors.hoverText} transition-colors`}>
                 {fw.name}
               </h3>
               <p className="text-sm text-gray-400">{fw.description}</p>
