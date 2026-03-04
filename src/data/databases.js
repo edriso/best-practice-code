@@ -1805,6 +1805,543 @@ module.exports = { connectDB, getDB };`,
         },
       ],
     },
+
+    // ─── Section 13: Redis ────────────────────────────────────────────
+    {
+      id: 'redis',
+      title: 'Redis',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Redis is an in-memory key-value store used for caching, session storage, rate limiting, and real-time features. It\'s extremely fast because all data lives in RAM.',
+        },
+        {
+          type: 'heading',
+          content: 'Setup & Connection',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'utils/redis.js',
+          code: `const { createClient } = require('redis');
+
+const redis = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  socket: {
+    reconnectStrategy: (retries) => {
+      if (retries > 10) return new Error('Redis: max retries reached');
+      return Math.min(retries * 100, 3000); // Exponential backoff
+    },
+  },
+});
+
+redis.on('error', (err) => console.error('Redis error:', err));
+redis.on('connect', () => console.log('Redis connected'));
+redis.on('reconnecting', () => console.log('Redis reconnecting...'));
+
+redis.connect();
+
+module.exports = redis;`,
+        },
+        {
+          type: 'heading',
+          content: 'Common Data Types & Operations',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `const redis = require('./utils/redis');
+
+// ─── Strings (most common for caching) ────────────────
+await redis.set('user:123', JSON.stringify(user));
+await redis.setEx('user:123', 3600, JSON.stringify(user)); // 1 hour TTL
+const user = JSON.parse(await redis.get('user:123'));
+await redis.del('user:123');
+
+// ─── Hashes (object-like, partial updates) ────────────
+await redis.hSet('session:abc', { userId: '123', role: 'admin', ip: '1.2.3.4' });
+const role = await redis.hGet('session:abc', 'role');
+const session = await redis.hGetAll('session:abc');
+
+// ─── Lists (ordered, for queues) ──────────────────────
+await redis.lPush('queue:emails', JSON.stringify(emailJob));
+const job = await redis.rPop('queue:emails'); // FIFO
+
+// ─── Sets (unique values) ─────────────────────────────
+await redis.sAdd('online-users', 'user:123');
+await redis.sRem('online-users', 'user:123');
+const onlineUsers = await redis.sMembers('online-users');
+const isOnline = await redis.sIsMember('online-users', 'user:123');
+
+// ─── Sorted Sets (leaderboards, rankings) ─────────────
+await redis.zAdd('leaderboard', { score: 100, value: 'user:123' });
+const top10 = await redis.zRangeWithScores('leaderboard', 0, 9, { REV: true });`,
+        },
+        {
+          type: 'heading',
+          content: 'Session Storage with Redis',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'app.js',
+          code: `const session = require('express-session');
+const RedisStore = require('connect-redis').default;
+const redis = require('./utils/redis');
+
+app.use(
+  session({
+    store: new RedisStore({ client: redis }),
+    secret: process.env.SESSION_SECRET,
+    resave: false,
+    saveUninitialized: false,
+    cookie: {
+      secure: process.env.NODE_ENV === 'production',
+      httpOnly: true,
+      maxAge: 24 * 60 * 60 * 1000, // 1 day
+    },
+  })
+);`,
+        },
+        {
+          type: 'heading',
+          content: 'When to Use Redis vs MongoDB',
+        },
+        {
+          type: 'list',
+          items: [
+            'Redis: Caching API responses, session storage, rate limit counters, real-time data (online users, typing indicators), job queues, pub/sub messaging',
+            'MongoDB: Persistent data (users, orders, content), complex queries with filtering/sorting, data that must survive a full restart, large documents',
+            'Rule of thumb: if you can afford to lose the data on restart, Redis is likely a good fit',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'note',
+          content:
+            'Redis data lives in RAM and is lost on restart by default. Enable AOF (Append Only File) or RDB snapshots for persistence. For managed Redis, use services like Redis Cloud, Upstash, or AWS ElastiCache.',
+        },
+      ],
+    },
+
+    // ─── Section 14: Indexing Strategies ──────────────────────────────
+    {
+      id: 'indexing',
+      title: 'Indexing Strategies',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Indexes dramatically speed up queries by letting the database find data without scanning every row/document. Without indexes, a query on 1 million records scans all 1 million. With an index, it jumps directly to the matching records.',
+        },
+        {
+          type: 'heading',
+          content: 'MongoDB Indexes (Mongoose)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'models/tourModel.js',
+          code: `const tourSchema = new mongoose.Schema({
+  name: { type: String, unique: true }, // unique automatically creates an index
+  price: Number,
+  ratingsAverage: { type: Number, default: 4.5 },
+  startLocation: {
+    type: { type: String, default: 'Point', enum: ['Point'] },
+    coordinates: [Number],
+  },
+});
+
+// Single field index
+tourSchema.index({ price: 1 }); // 1 = ascending, -1 = descending
+
+// Compound index (covers queries filtering on BOTH fields)
+tourSchema.index({ price: 1, ratingsAverage: -1 });
+
+// Unique compound index (one review per user per tour)
+reviewSchema.index({ tour: 1, user: 1 }, { unique: true });
+
+// Text index (for search)
+tourSchema.index({ name: 'text', description: 'text' });
+
+// Geospatial index (for location queries)
+tourSchema.index({ startLocation: '2dsphere' });
+
+// Partial index (only index documents matching a condition)
+tourSchema.index(
+  { price: 1 },
+  { partialFilterExpression: { price: { $gt: 0 } } }
+);
+
+// TTL index (auto-delete documents after time)
+sessionSchema.index({ createdAt: 1 }, { expireAfterSeconds: 86400 });`,
+        },
+        {
+          type: 'heading',
+          content: 'PostgreSQL Indexes (SQL)',
+        },
+        {
+          type: 'code',
+          language: 'sql',
+          code: `-- B-tree index (default, most common)
+CREATE INDEX idx_users_email ON users (email);
+
+-- Unique index
+CREATE UNIQUE INDEX idx_users_email_unique ON users (email);
+
+-- Compound index
+CREATE INDEX idx_tours_price_rating ON tours (price, ratings_average DESC);
+
+-- Partial index (only index active users)
+CREATE INDEX idx_active_users ON users (email) WHERE active = true;
+
+-- GIN index (for full-text search / JSONB)
+CREATE INDEX idx_tours_search ON tours USING GIN (to_tsvector('english', name || ' ' || description));
+
+-- GiST index (for geometric/geographic data)
+CREATE INDEX idx_tours_location ON tours USING GIST (location);`,
+        },
+        {
+          type: 'heading',
+          content: 'Index Best Practices',
+        },
+        {
+          type: 'list',
+          items: [
+            'Index fields you frequently filter, sort, or join on',
+            'Compound indexes should follow the ESR rule: Equality fields first, Sort fields second, Range fields last',
+            'Don\'t over-index — each index slows down writes (INSERT/UPDATE) because the index must be updated too',
+            'Use explain() (MongoDB) or EXPLAIN ANALYZE (PostgreSQL) to verify your queries use indexes',
+            'Unique indexes enforce data integrity and are fast for lookups (email, username)',
+            'TTL indexes are perfect for sessions, OTPs, and temporary data — auto-deletes expired docs',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Checking Index Usage',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'MongoDB — explain query',
+          code: `// Check if a query uses an index
+const explained = await Tour.find({ price: { $lt: 500 } })
+  .sort('-ratingsAverage')
+  .explain('executionStats');
+
+console.log(explained.executionStats.executionStages.stage);
+// "IXSCAN" = using index (good)
+// "COLLSCAN" = full collection scan (needs index)
+
+console.log(explained.executionStats.nReturned);     // docs returned
+console.log(explained.executionStats.totalDocsExamined); // docs scanned`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'A compound index on { price: 1, ratingsAverage: -1 } supports queries on price alone OR price + ratingsAverage, but NOT ratingsAverage alone. The order of fields in compound indexes matters — put the most selective (most restrictive) field first.',
+        },
+      ],
+    },
+
+    // ─── Section 15: Transactions ────────────────────────────────────
+    {
+      id: 'transactions',
+      title: 'Transactions',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Transactions ensure that a group of database operations either all succeed or all fail (atomicity). Use them when modifying multiple documents/rows that must stay consistent — like transferring money between accounts or creating an order with inventory deduction.',
+        },
+        {
+          type: 'heading',
+          content: 'MongoDB Transactions (Mongoose)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'controllers/bookingController.js',
+          code: `const mongoose = require('mongoose');
+
+exports.createBooking = catchAsync(async (req, res, next) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    // 1. Create the booking
+    const [booking] = await Booking.create(
+      [{ tour: req.body.tourId, user: req.user.id, price: req.body.price }],
+      { session }
+    );
+
+    // 2. Decrease available spots on the tour
+    const tour = await Tour.findByIdAndUpdate(
+      req.body.tourId,
+      { $inc: { availableSpots: -1 } },
+      { session, new: true }
+    );
+
+    if (tour.availableSpots < 0) {
+      throw new Error('No spots available');
+    }
+
+    // 3. Commit if everything succeeded
+    await session.commitTransaction();
+
+    res.status(201).json({ status: 'success', data: { booking } });
+  } catch (err) {
+    // Rollback all changes on failure
+    await session.abortTransaction();
+    return next(new AppError(err.message, 400));
+  } finally {
+    session.endSession();
+  }
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'PostgreSQL Transactions (Knex)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'controllers/transferController.js',
+          code: `const db = require('../db');
+
+exports.transferFunds = catchAsync(async (req, res, next) => {
+  const { fromAccountId, toAccountId, amount } = req.body;
+
+  await db.transaction(async (trx) => {
+    // 1. Deduct from sender
+    const [sender] = await trx('accounts')
+      .where({ id: fromAccountId })
+      .decrement('balance', amount)
+      .returning('*');
+
+    if (sender.balance < 0) {
+      throw new Error('Insufficient funds');
+    }
+
+    // 2. Add to receiver
+    await trx('accounts')
+      .where({ id: toAccountId })
+      .increment('balance', amount);
+
+    // 3. Record the transaction
+    await trx('transfers').insert({
+      from_account: fromAccountId,
+      to_account: toAccountId,
+      amount,
+    });
+  });
+  // Auto-commits if no error, auto-rollbacks on throw
+
+  res.status(200).json({ status: 'success', message: 'Transfer complete' });
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'PostgreSQL Transactions (Prisma)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `const { PrismaClient } = require('@prisma/client');
+const prisma = new PrismaClient();
+
+async function createOrder(userId, items) {
+  return prisma.$transaction(async (tx) => {
+    // 1. Create the order
+    const order = await tx.order.create({
+      data: { userId, status: 'pending' },
+    });
+
+    // 2. Create order items and update stock
+    for (const item of items) {
+      await tx.orderItem.create({
+        data: {
+          orderId: order.id,
+          productId: item.productId,
+          quantity: item.quantity,
+        },
+      });
+
+      const product = await tx.product.update({
+        where: { id: item.productId },
+        data: { stock: { decrement: item.quantity } },
+      });
+
+      if (product.stock < 0) {
+        throw new Error(\`\${product.name} is out of stock\`);
+      }
+    }
+
+    return order;
+  });
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'When to Use Transactions',
+        },
+        {
+          type: 'list',
+          items: [
+            'Money transfers — deduct from one, add to another',
+            'Order creation — create order + deduct inventory + charge payment',
+            'User registration — create user + create profile + send welcome email record',
+            'Any operation where partial completion leaves data in an invalid state',
+            'NOT needed for single document/row updates — those are already atomic',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'MongoDB transactions require a replica set (or MongoDB Atlas). They don\'t work with a standalone local MongoDB instance. For local development, use "mongod --replSet rs0" or use Atlas free tier.',
+        },
+      ],
+    },
+
+    // ─── Section 16: Database Migrations ─────────────────────────────
+    {
+      id: 'migrations',
+      title: 'Database Migrations',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Migrations are version-controlled changes to your database schema. They ensure every environment (dev, staging, production) has the same database structure. Essential for SQL databases; useful for MongoDB data transformations.',
+        },
+        {
+          type: 'heading',
+          content: 'Prisma Migrations',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Create a migration from schema changes
+npx prisma migrate dev --name add_user_role
+
+# Apply migrations in production
+npx prisma migrate deploy
+
+# Reset database (development only)
+npx prisma migrate reset
+
+# View migration status
+npx prisma migrate status`,
+        },
+        {
+          type: 'code',
+          language: 'prisma',
+          fileName: 'prisma/schema.prisma',
+          code: `model User {
+  id        Int      @id @default(autoincrement())
+  email     String   @unique
+  name      String
+  role      String   @default("user")  // New field added via migration
+  createdAt DateTime @default(now())
+  posts     Post[]
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Knex Migrations',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Create a new migration file
+npx knex migrate:make create_users_table
+
+# Run pending migrations
+npx knex migrate:latest
+
+# Rollback last batch
+npx knex migrate:rollback
+
+# Rollback all
+npx knex migrate:rollback --all`,
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'migrations/20240101_create_users_table.js',
+          code: `exports.up = function (knex) {
+  return knex.schema.createTable('users', (table) => {
+    table.increments('id').primary();
+    table.string('email').notNullable().unique();
+    table.string('name').notNullable();
+    table.string('password_hash').notNullable();
+    table.enum('role', ['user', 'admin']).defaultTo('user');
+    table.boolean('active').defaultTo(true);
+    table.timestamps(true, true); // created_at, updated_at
+  });
+};
+
+exports.down = function (knex) {
+  return knex.schema.dropTable('users');
+};`,
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'migrations/20240102_add_avatar_to_users.js',
+          code: `exports.up = function (knex) {
+  return knex.schema.alterTable('users', (table) => {
+    table.string('avatar_url').after('name');
+  });
+};
+
+exports.down = function (knex) {
+  return knex.schema.alterTable('users', (table) => {
+    table.dropColumn('avatar_url');
+  });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'Sequelize Migrations',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Generate a migration
+npx sequelize-cli migration:generate --name add-role-to-users
+
+# Run migrations
+npx sequelize-cli db:migrate
+
+# Undo last migration
+npx sequelize-cli db:migrate:undo`,
+        },
+        {
+          type: 'heading',
+          content: 'Migration Best Practices',
+        },
+        {
+          type: 'list',
+          items: [
+            'Always write both up (apply) and down (rollback) functions',
+            'Name migrations with timestamps: 20240101_create_users, 20240102_add_role',
+            'Never modify an existing migration that\'s been deployed — create a new one',
+            'Test migrations locally: migrate up, verify, rollback, migrate up again',
+            'Commit migration files to git — they\'re version-controlled schema changes',
+            'For MongoDB, use scripts for data transformations (rename fields, restructure docs)',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Prisma generates migrations automatically from schema.prisma changes — the easiest workflow. Knex gives you full SQL control. Both are solid choices for production Express apps.',
+        },
+      ],
+    },
   ],
 }
 

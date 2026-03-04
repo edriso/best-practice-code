@@ -830,6 +830,835 @@ config.env
         },
       ],
     },
+
+    // ─── Section 11: WebSockets & Real-Time (Socket.io) ─────────────
+    {
+      id: 'websockets',
+      title: 'WebSockets & Real-Time (Socket.io)',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Socket.io enables real-time, bidirectional communication between the client and server. Use it for chat, live notifications, collaborative editing, and live dashboards.',
+        },
+        {
+          type: 'heading',
+          content: 'Server Setup',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/server.js',
+          code: `const { createServer } = require('http');
+const { Server } = require('socket.io');
+const app = require('./app');
+
+const httpServer = createServer(app);
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL || 'http://localhost:5173',
+    credentials: true,
+  },
+});
+
+// Authentication middleware
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
+    socket.userId = decoded.id;
+    next();
+  } catch (err) {
+    next(new Error('Authentication error'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log(\`User connected: \${socket.userId}\`);
+
+  // Join a room (e.g., chat room, user-specific room)
+  socket.join(\`user:\${socket.userId}\`);
+
+  socket.on('sendMessage', async (data) => {
+    const message = await Message.create({
+      text: data.text,
+      sender: socket.userId,
+      room: data.roomId,
+    });
+    // Broadcast to room
+    io.to(data.roomId).emit('newMessage', message);
+  });
+
+  socket.on('joinRoom', (roomId) => {
+    socket.join(roomId);
+  });
+
+  socket.on('disconnect', () => {
+    console.log(\`User disconnected: \${socket.userId}\`);
+  });
+});
+
+// Make io accessible in routes for sending events from API handlers
+app.set('io', io);
+
+httpServer.listen(process.env.PORT || 3000);`,
+        },
+        {
+          type: 'heading',
+          content: 'Client Hook',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'client/src/hooks/useSocket.js',
+          code: `import { useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
+
+const SERVER_URL = import.meta.env.VITE_API_URL?.replace('/api/v1', '') || 'http://localhost:3000';
+
+export function useSocket(token) {
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    if (!token) return;
+
+    socketRef.current = io(SERVER_URL, {
+      auth: { token },
+    });
+
+    return () => {
+      socketRef.current?.disconnect();
+    };
+  }, [token]);
+
+  return socketRef;
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Using in a Chat Component',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'client/src/features/chat/ChatRoom.jsx',
+          code: `import { useState, useEffect } from 'react';
+import { useSocket } from '../../hooks/useSocket';
+import { useUser } from '../auth/useUser';
+
+function ChatRoom({ roomId }) {
+  const [messages, setMessages] = useState([]);
+  const { user } = useUser();
+  const socketRef = useSocket(user?.token);
+
+  useEffect(() => {
+    const socket = socketRef.current;
+    if (!socket) return;
+
+    socket.emit('joinRoom', roomId);
+    socket.on('newMessage', (message) => {
+      setMessages((prev) => [...prev, message]);
+    });
+
+    return () => {
+      socket.off('newMessage');
+    };
+  }, [roomId, socketRef]);
+
+  function sendMessage(text) {
+    socketRef.current?.emit('sendMessage', { text, roomId });
+  }
+
+  return (
+    <div>
+      {messages.map((msg) => (
+        <p key={msg._id}>{msg.text}</p>
+      ))}
+    </div>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Emitting from API Routes',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/controllers/orderController.js',
+          code: `// Send real-time notification from a REST endpoint
+exports.updateOrder = catchAsync(async (req, res, next) => {
+  const order = await Order.findByIdAndUpdate(req.params.id, req.body, {
+    new: true,
+  });
+
+  // Notify the user via WebSocket
+  const io = req.app.get('io');
+  io.to(\`user:\${order.userId}\`).emit('orderUpdate', {
+    orderId: order._id,
+    status: order.status,
+  });
+
+  res.status(200).json({ status: 'success', data: { order } });
+});`,
+        },
+        {
+          type: 'tip',
+          variant: 'note',
+          content:
+            'Socket.io automatically falls back to HTTP long-polling if WebSocket isn\'t available. For production, use the Redis adapter (@socket.io/redis-adapter) to share events across multiple server instances.',
+        },
+      ],
+    },
+
+    // ─── Section 12: Caching with Redis ─────────────────────────────
+    {
+      id: 'caching',
+      title: 'Caching with Redis',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Redis is an in-memory data store used for caching API responses, session storage, and rate limiting. Caching frequently-read data dramatically reduces database load and response times.',
+        },
+        {
+          type: 'heading',
+          content: 'Redis Setup',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/utils/redis.js',
+          code: `const { createClient } = require('redis');
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+});
+
+redisClient.on('error', (err) => console.error('Redis error:', err));
+redisClient.on('connect', () => console.log('Redis connected'));
+
+redisClient.connect();
+
+module.exports = redisClient;`,
+        },
+        {
+          type: 'heading',
+          content: 'Cache Middleware',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/middleware/cache.js',
+          code: `const redis = require('../utils/redis');
+
+const cache = (keyPrefix, ttlSeconds = 3600) => async (req, res, next) => {
+  const key = \`\${keyPrefix}:\${req.originalUrl}\`;
+
+  try {
+    const cached = await redis.get(key);
+    if (cached) {
+      return res.status(200).json(JSON.parse(cached));
+    }
+  } catch (err) {
+    console.error('Cache read error:', err);
+  }
+
+  // Store original json method to intercept the response
+  const originalJson = res.json.bind(res);
+  res.json = async (data) => {
+    try {
+      await redis.setEx(key, ttlSeconds, JSON.stringify(data));
+    } catch (err) {
+      console.error('Cache write error:', err);
+    }
+    return originalJson(data);
+  };
+
+  next();
+};
+
+module.exports = cache;`,
+        },
+        {
+          type: 'heading',
+          content: 'Using the Cache',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/routes/tourRoutes.js',
+          code: `const cache = require('../middleware/cache');
+
+// Cache tour list for 5 minutes
+router.get('/', cache('tours', 300), tourController.getAllTours);
+
+// Cache single tour for 10 minutes
+router.get('/:id', cache('tour', 600), tourController.getTour);`,
+        },
+        {
+          type: 'heading',
+          content: 'Cache Invalidation',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/utils/clearCache.js',
+          code: `const redis = require('./redis');
+
+async function clearCache(pattern) {
+  const keys = [];
+  for await (const key of redis.scanIterator({ MATCH: \`\${pattern}:*\` })) {
+    keys.push(key);
+  }
+  if (keys.length > 0) {
+    await redis.del(keys);
+  }
+}
+
+module.exports = clearCache;
+
+// Usage in controller after mutation:
+exports.createTour = catchAsync(async (req, res, next) => {
+  const tour = await Tour.create(req.body);
+  await clearCache('tours'); // Invalidate tours list cache
+  res.status(201).json({ status: 'success', data: { tour } });
+});`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Cache reads but invalidate on writes. A simple pattern: cache GET requests, clear cache on POST/PATCH/DELETE. Start with generous TTLs (5-10 minutes) and adjust based on how stale your data can be.',
+        },
+      ],
+    },
+
+    // ─── Section 13: Rate Limiting & Security ───────────────────────
+    {
+      id: 'rate-limiting',
+      title: 'Rate Limiting & Security',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'A production MERN app needs multiple layers of security: rate limiting to prevent abuse, input sanitization to prevent injection, and security headers to prevent common attacks.',
+        },
+        {
+          type: 'heading',
+          content: 'Full Security Middleware Stack',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/app.js',
+          code: `const helmet = require('helmet');
+const rateLimit = require('express-rate-limit');
+const mongoSanitize = require('express-mongo-sanitize');
+const hpp = require('hpp');
+
+// Security HTTP headers
+app.use(helmet());
+
+// Rate limiting
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many requests, please try again later.',
+});
+app.use('/api', limiter);
+
+// Stricter limit for auth routes
+const authLimiter = rateLimit({
+  max: 10,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many attempts, please try again in an hour.',
+});
+app.use('/api/v1/users/login', authLimiter);
+app.use('/api/v1/users/forgotPassword', authLimiter);
+
+// Body parser with size limit
+app.use(express.json({ limit: '10kb' }));
+
+// Data sanitization against NoSQL injection
+app.use(mongoSanitize());
+
+// Prevent parameter pollution
+app.use(
+  hpp({
+    whitelist: ['duration', 'price', 'difficulty', 'ratingsAverage'],
+  })
+);`,
+        },
+        {
+          type: 'heading',
+          content: 'Content Security Policy (for serving React)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `// When serving React build from Express
+app.use(
+  helmet.contentSecurityPolicy({
+    directives: {
+      defaultSrc: ["'self'"],
+      scriptSrc: ["'self'", "'unsafe-inline'"],
+      styleSrc: ["'self'", "'unsafe-inline'", 'https://fonts.googleapis.com'],
+      fontSrc: ["'self'", 'https://fonts.gstatic.com'],
+      imgSrc: ["'self'", 'data:', 'https:'],
+      connectSrc: ["'self'", 'https://api.yourdomain.com', 'wss://api.yourdomain.com'],
+    },
+  })
+);`,
+        },
+        {
+          type: 'heading',
+          content: 'Security Packages',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'helmet',
+              description: 'Sets security HTTP headers (X-Content-Type-Options, X-Frame-Options, etc.)',
+            },
+            {
+              name: 'express-rate-limit',
+              description: 'Rate limiting middleware — limits requests per IP per time window',
+            },
+            {
+              name: 'express-mongo-sanitize',
+              description: 'Prevents NoSQL injection by stripping $ and . from user input',
+            },
+            {
+              name: 'hpp',
+              description: 'Prevents HTTP parameter pollution attacks',
+            },
+            {
+              name: 'cors',
+              description: 'Controls cross-origin access — restrict to your frontend domain',
+            },
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'Always validate and sanitize on the server — never trust the client. Frontend validation is for UX, backend validation is for security.',
+        },
+      ],
+    },
+
+    // ─── Section 14: Image Upload & Optimization ────────────────────
+    {
+      id: 'image-optimization',
+      title: 'Image Upload & Optimization',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'For production MERN apps, store images in cloud storage (Cloudinary or AWS S3) rather than the local filesystem. This scales, provides CDN delivery, and survives server redeployments.',
+        },
+        {
+          type: 'heading',
+          content: 'Cloudinary Setup',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/utils/cloudinary.js',
+          code: `const cloudinary = require('cloudinary').v2;
+const { CloudinaryStorage } = require('multer-storage-cloudinary');
+const multer = require('multer');
+
+cloudinary.config({
+  cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY,
+  api_secret: process.env.CLOUDINARY_API_SECRET,
+});
+
+const storage = new CloudinaryStorage({
+  cloudinary,
+  params: {
+    folder: 'myapp/users',
+    allowed_formats: ['jpg', 'jpeg', 'png', 'webp'],
+    transformation: [{ width: 500, height: 500, crop: 'fill' }],
+  },
+});
+
+const upload = multer({ storage });
+
+module.exports = { cloudinary, upload };`,
+        },
+        {
+          type: 'heading',
+          content: 'Controller with Cloudinary',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/controllers/userController.js',
+          code: `const { upload, cloudinary } = require('../utils/cloudinary');
+
+exports.uploadPhoto = upload.single('photo');
+
+exports.updateMe = catchAsync(async (req, res, next) => {
+  const updateData = { name: req.body.name, email: req.body.email };
+
+  // Cloudinary URL is in req.file.path after upload
+  if (req.file) {
+    updateData.photo = req.file.path;
+
+    // Delete old photo from Cloudinary
+    const user = await User.findById(req.user.id);
+    if (user.photo && user.photo.includes('cloudinary')) {
+      const publicId = user.photo.split('/').slice(-2).join('/').split('.')[0];
+      await cloudinary.uploader.destroy(publicId);
+    }
+  }
+
+  const updatedUser = await User.findByIdAndUpdate(req.user.id, updateData, {
+    new: true,
+    runValidators: true,
+  });
+
+  res.status(200).json({ status: 'success', data: { user: updatedUser } });
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'AWS S3 Alternative',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/utils/s3.js',
+          code: `const { S3Client, PutObjectCommand, DeleteObjectCommand } = require('@aws-sdk/client-s3');
+const crypto = require('crypto');
+
+const s3 = new S3Client({
+  region: process.env.AWS_REGION,
+  credentials: {
+    accessKeyId: process.env.AWS_ACCESS_KEY_ID,
+    secretAccessKey: process.env.AWS_SECRET_ACCESS_KEY,
+  },
+});
+
+async function uploadToS3(fileBuffer, mimetype) {
+  const key = \`users/\${crypto.randomUUID()}.\${mimetype.split('/')[1]}\`;
+
+  await s3.send(new PutObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: key,
+    Body: fileBuffer,
+    ContentType: mimetype,
+  }));
+
+  return \`https://\${process.env.AWS_BUCKET_NAME}.s3.\${process.env.AWS_REGION}.amazonaws.com/\${key}\`;
+}
+
+async function deleteFromS3(url) {
+  const key = new URL(url).pathname.slice(1);
+  await s3.send(new DeleteObjectCommand({
+    Bucket: process.env.AWS_BUCKET_NAME,
+    Key: key,
+  }));
+}
+
+module.exports = { uploadToS3, deleteFromS3 };`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Cloudinary is simpler (built-in transformations, CDN) and great for small-to-medium apps. S3 gives more control and is cheaper at scale. Both are far better than storing images on your server filesystem.',
+        },
+      ],
+    },
+
+    // ─── Section 15: Payment Integration ────────────────────────────
+    {
+      id: 'payments',
+      title: 'Payment Integration',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Stripe is the standard for payment processing in MERN apps. The pattern: create a checkout session on the backend, redirect the user to Stripe\'s hosted payment page, handle the result via webhooks.',
+        },
+        {
+          type: 'heading',
+          content: 'Backend: Create Checkout Session',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/controllers/bookingController.js',
+          code: `const stripe = require('stripe')(process.env.STRIPE_SECRET_KEY);
+
+exports.getCheckoutSession = catchAsync(async (req, res, next) => {
+  const tour = await Tour.findById(req.params.tourId);
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'payment',
+    success_url: \`\${process.env.CLIENT_URL}/bookings?success=true\`,
+    cancel_url: \`\${process.env.CLIENT_URL}/tour/\${tour.id}\`,
+    customer_email: req.user.email,
+    client_reference_id: tour.id,
+    line_items: [
+      {
+        price_data: {
+          currency: 'usd',
+          product_data: {
+            name: tour.name,
+            description: tour.summary,
+            images: [\`\${process.env.CLIENT_URL}/img/tours/\${tour.imageCover}\`],
+          },
+          unit_amount: tour.price * 100, // Stripe uses cents
+        },
+        quantity: 1,
+      },
+    ],
+  });
+
+  res.status(200).json({ status: 'success', session });
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Backend: Webhook Handler',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/controllers/bookingController.js',
+          code: `// IMPORTANT: Use raw body for webhook verification
+// In app.js, BEFORE express.json():
+// app.post('/webhook-checkout', express.raw({ type: 'application/json' }), bookingController.webhookCheckout);
+
+exports.webhookCheckout = async (req, res) => {
+  const signature = req.headers['stripe-signature'];
+
+  let event;
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,
+      signature,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    return res.status(400).send(\`Webhook error: \${err.message}\`);
+  }
+
+  if (event.type === 'checkout.session.completed') {
+    const session = event.data.object;
+    const tourId = session.client_reference_id;
+    const user = await User.findOne({ email: session.customer_email });
+
+    await Booking.create({
+      tour: tourId,
+      user: user._id,
+      price: session.amount_total / 100,
+    });
+  }
+
+  res.status(200).json({ received: true });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'Frontend: Redirect to Checkout',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'client/src/features/bookings/useCheckout.js',
+          code: `export function useCheckout() {
+  const { mutate: checkout, isLoading } = useMutation({
+    mutationFn: async (tourId) => {
+      const res = await fetch(
+        \`\${API_URL}/bookings/checkout-session/\${tourId}\`,
+        { credentials: 'include' }
+      );
+      const { session } = await res.json();
+      // Redirect to Stripe's hosted checkout
+      window.location.href = session.url;
+    },
+    onError: (err) => toast.error(err.message),
+  });
+
+  return { checkout, isLoading };
+}
+
+// Usage:
+// <button onClick={() => checkout(tour._id)}>Book Now</button>`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'Never trust the client for payment amounts — always calculate prices on the server. Use webhooks (not success_url) to confirm payments, as users can close the browser before being redirected back.',
+        },
+      ],
+    },
+
+    // ─── Section 16: Email Sending ──────────────────────────────────
+    {
+      id: 'email',
+      title: 'Email Sending',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Use Nodemailer for sending emails in development (with Mailtrap) and production (with SendGrid, Mailgun, or Brevo). Create a reusable Email class that handles templates and different providers.',
+        },
+        {
+          type: 'heading',
+          content: 'Reusable Email Class',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/utils/email.js',
+          code: `const nodemailer = require('nodemailer');
+
+class Email {
+  constructor(user, url) {
+    this.to = user.email;
+    this.firstName = user.name.split(' ')[0];
+    this.url = url;
+    this.from = \`MyApp <\${process.env.EMAIL_FROM}>\`;
+  }
+
+  createTransport() {
+    if (process.env.NODE_ENV === 'production') {
+      // SendGrid
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: process.env.SENDGRID_USERNAME,
+          pass: process.env.SENDGRID_PASSWORD,
+        },
+      });
+    }
+    // Mailtrap (development)
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+  }
+
+  async send(subject, text) {
+    const mailOptions = {
+      from: this.from,
+      to: this.to,
+      subject,
+      text,
+    };
+    await this.createTransport().sendMail(mailOptions);
+  }
+
+  async sendWelcome() {
+    await this.send(
+      'Welcome to MyApp!',
+      \`Hi \${this.firstName}, welcome! Get started here: \${this.url}\`
+    );
+  }
+
+  async sendPasswordReset() {
+    await this.send(
+      'Password Reset (valid for 10 minutes)',
+      \`Forgot your password? Reset it here: \${this.url}\\n\\nIf you didn't request this, please ignore this email.\`
+    );
+  }
+
+  async sendOrderConfirmation(order) {
+    await this.send(
+      \`Order Confirmation #\${order._id}\`,
+      \`Hi \${this.firstName}, your order of $\${order.price} has been confirmed!\`
+    );
+  }
+}
+
+module.exports = Email;`,
+        },
+        {
+          type: 'heading',
+          content: 'Using in Controllers',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server/controllers/authController.js',
+          code: `const Email = require('../utils/email');
+
+exports.signup = catchAsync(async (req, res, next) => {
+  const user = await User.create({
+    name: req.body.name,
+    email: req.body.email,
+    password: req.body.password,
+    passwordConfirm: req.body.passwordConfirm,
+  });
+
+  const url = \`\${process.env.CLIENT_URL}/me\`;
+  await new Email(user, url).sendWelcome();
+
+  createSendToken(user, 201, req, res);
+});
+
+exports.forgotPassword = catchAsync(async (req, res, next) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) return next(new AppError('No user found with that email.', 404));
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  const resetURL = \`\${process.env.CLIENT_URL}/reset-password/\${resetToken}\`;
+
+  try {
+    await new Email(user, resetURL).sendPasswordReset();
+    res.status(200).json({ status: 'success', message: 'Token sent to email!' });
+  } catch (err) {
+    user.passwordResetToken = undefined;
+    user.passwordResetExpires = undefined;
+    await user.save({ validateBeforeSave: false });
+    return next(new AppError('Error sending email. Try again later.', 500));
+  }
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Environment Variables',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          fileName: 'server/config.env',
+          code: `# Development (Mailtrap)
+EMAIL_HOST=sandbox.smtp.mailtrap.io
+EMAIL_PORT=2525
+EMAIL_USERNAME=your_mailtrap_user
+EMAIL_PASSWORD=your_mailtrap_pass
+
+# Production (SendGrid)
+SENDGRID_USERNAME=apikey
+SENDGRID_PASSWORD=SG.your_api_key_here
+
+EMAIL_FROM=noreply@myapp.com`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Use Mailtrap in development — it catches all emails without sending them to real addresses. In production, SendGrid offers 100 free emails/day. For high volume, consider a queue (Bull + Redis) to send emails in the background.',
+        },
+      ],
+    },
   ],
 }
 

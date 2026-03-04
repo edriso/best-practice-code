@@ -41,13 +41,17 @@ src/
 
   data/
     frameworks.js             # Registry: { id, name, description, icon, color }
-    express.js                # Express.js content (13 sections)
-    react.js                  # React.js content (13 sections)
-    mern.js                   # MERN Stack content (10 sections)
+    express.js                # Express.js content (17 sections)
+    react.js                  # React.js content (17 sections)
+    mern.js                   # MERN Stack content (16 sections)
     javascript.js             # JavaScript & OOP content (12 sections)
+    typescript.js             # TypeScript content (12 sections)
+    nodejs.js                 # Node.js core content (12 sections)
+    testing.js                # Testing content (12 sections)
+    git.js                    # Git & GitHub content (12 sections)
     css.js                    # Advanced CSS content (12 sections)
     html.js                   # HTML Semantic content (10 sections)
-    databases.js              # Databases with Express.js content (12 sections)
+    databases.js              # Databases with Express.js content (16 sections)
 
   pages/
     HomePage.jsx              # Landing with framework cards

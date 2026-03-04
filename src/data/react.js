@@ -2120,6 +2120,548 @@ function Error() {
         },
       ],
     },
+
+    // ─── Section 14: Context API Patterns ─────────────────────────────
+    {
+      id: 'context-api',
+      title: 'Context API Patterns',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Context provides a way to pass data through the component tree without prop drilling. Use it for global state like auth, theme, and locale. For complex state logic, combine Context with useReducer.',
+        },
+        {
+          type: 'heading',
+          content: 'Creating a Context Provider',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'contexts/AuthContext.jsx',
+          code: `import { createContext, useContext, useState } from 'react';
+
+const AuthContext = createContext();
+
+function AuthProvider({ children }) {
+  const [user, setUser] = useState(null);
+
+  function login(userData) {
+    setUser(userData);
+  }
+
+  function logout() {
+    setUser(null);
+  }
+
+  return (
+    <AuthContext.Provider value={{ user, login, logout, isAuthenticated: !!user }}>
+      {children}
+    </AuthContext.Provider>
+  );
+}
+
+function useAuth() {
+  const context = useContext(AuthContext);
+  if (context === undefined)
+    throw new Error('useAuth must be used within an AuthProvider');
+  return context;
+}
+
+export { AuthProvider, useAuth };`,
+        },
+        {
+          type: 'heading',
+          content: 'Using the Context',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          code: `// Wrap your app
+function App() {
+  return (
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes />
+      </BrowserRouter>
+    </AuthProvider>
+  );
+}
+
+// Consume anywhere in the tree
+function Header() {
+  const { user, logout, isAuthenticated } = useAuth();
+
+  return (
+    <header>
+      {isAuthenticated ? (
+        <>
+          <span>Welcome, {user.name}</span>
+          <button onClick={logout}>Logout</button>
+        </>
+      ) : (
+        <Link to="/login">Login</Link>
+      )}
+    </header>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Context with useReducer (Complex State)',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'contexts/CartContext.jsx',
+          code: `import { createContext, useContext, useReducer } from 'react';
+
+const CartContext = createContext();
+
+const initialState = { items: [], totalPrice: 0 };
+
+function cartReducer(state, action) {
+  switch (action.type) {
+    case 'cart/addItem': {
+      const existing = state.items.find((i) => i.id === action.payload.id);
+      const items = existing
+        ? state.items.map((i) =>
+            i.id === action.payload.id ? { ...i, quantity: i.quantity + 1 } : i
+          )
+        : [...state.items, { ...action.payload, quantity: 1 }];
+      return {
+        ...state,
+        items,
+        totalPrice: items.reduce((sum, i) => sum + i.price * i.quantity, 0),
+      };
+    }
+    case 'cart/removeItem':
+      return {
+        ...state,
+        items: state.items.filter((i) => i.id !== action.payload),
+        totalPrice: state.items
+          .filter((i) => i.id !== action.payload)
+          .reduce((sum, i) => sum + i.price * i.quantity, 0),
+      };
+    case 'cart/clear':
+      return initialState;
+    default:
+      throw new Error(\`Unknown action: \${action.type}\`);
+  }
+}
+
+function CartProvider({ children }) {
+  const [{ items, totalPrice }, dispatch] = useReducer(cartReducer, initialState);
+
+  function addItem(item) {
+    dispatch({ type: 'cart/addItem', payload: item });
+  }
+
+  function removeItem(id) {
+    dispatch({ type: 'cart/removeItem', payload: id });
+  }
+
+  function clearCart() {
+    dispatch({ type: 'cart/clear' });
+  }
+
+  return (
+    <CartContext.Provider value={{ items, totalPrice, addItem, removeItem, clearCart }}>
+      {children}
+    </CartContext.Provider>
+  );
+}
+
+function useCart() {
+  const context = useContext(CartContext);
+  if (context === undefined)
+    throw new Error('useCart must be used within a CartProvider');
+  return context;
+}
+
+export { CartProvider, useCart };`,
+        },
+        {
+          type: 'tip',
+          variant: 'note',
+          content:
+            'Context causes all consumers to re-render when the value changes. For frequently changing values (like mouse position), use a state management library instead. Context is ideal for infrequent updates like auth, theme, and locale.',
+        },
+      ],
+    },
+
+    // ─── Section 15: useReducer ───────────────────────────────────────
+    {
+      id: 'use-reducer',
+      title: 'useReducer',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'useReducer is an alternative to useState for complex state logic — multiple related state values, state transitions that depend on the previous state, or when the next state depends on an action type.',
+        },
+        {
+          type: 'heading',
+          content: 'When to Use useReducer vs useState',
+        },
+        {
+          type: 'list',
+          items: [
+            'useState: 1-2 independent state values, simple updates (toggle, set value)',
+            'useReducer: 3+ related state values, complex transitions, state machine patterns',
+            'Rule of thumb: if you have multiple setState calls in one handler, consider useReducer',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Basic Pattern',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          code: `import { useReducer } from 'react';
+
+const initialState = {
+  count: 0,
+  step: 1,
+};
+
+function reducer(state, action) {
+  switch (action.type) {
+    case 'increment':
+      return { ...state, count: state.count + state.step };
+    case 'decrement':
+      return { ...state, count: state.count - state.step };
+    case 'setStep':
+      return { ...state, step: action.payload };
+    case 'reset':
+      return initialState;
+    default:
+      throw new Error(\`Unknown action: \${action.type}\`);
+  }
+}
+
+function Counter() {
+  const [state, dispatch] = useReducer(reducer, initialState);
+
+  return (
+    <div>
+      <p>Count: {state.count}</p>
+      <input
+        type="range" min="1" max="10"
+        value={state.step}
+        onChange={(e) => dispatch({ type: 'setStep', payload: +e.target.value })}
+      />
+      <button onClick={() => dispatch({ type: 'increment' })}>+</button>
+      <button onClick={() => dispatch({ type: 'decrement' })}>-</button>
+      <button onClick={() => dispatch({ type: 'reset' })}>Reset</button>
+    </div>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Real-World Example: Form State',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          code: `const initialState = {
+  status: 'idle', // idle | loading | error | success
+  data: null,
+  error: '',
+};
+
+function formReducer(state, action) {
+  switch (action.type) {
+    case 'loading':
+      return { ...state, status: 'loading', error: '' };
+    case 'success':
+      return { status: 'success', data: action.payload, error: '' };
+    case 'error':
+      return { ...state, status: 'error', error: action.payload };
+    case 'reset':
+      return initialState;
+    default:
+      throw new Error(\`Unknown action: \${action.type}\`);
+  }
+}
+
+function SubmitForm() {
+  const [{ status, data, error }, dispatch] = useReducer(formReducer, initialState);
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    dispatch({ type: 'loading' });
+    try {
+      const result = await submitData(new FormData(e.target));
+      dispatch({ type: 'success', payload: result });
+    } catch (err) {
+      dispatch({ type: 'error', payload: err.message });
+    }
+  }
+
+  return (
+    <form onSubmit={handleSubmit}>
+      {error && <p className="text-red-500">{error}</p>}
+      {status === 'success' && <p className="text-green-500">Submitted!</p>}
+      <button disabled={status === 'loading'}>
+        {status === 'loading' ? 'Submitting...' : 'Submit'}
+      </button>
+    </form>
+  );
+}`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Name your action types with a domain prefix (e.g., "cart/addItem", "form/setField") to keep them organized and avoid collisions when combining with Context.',
+        },
+      ],
+    },
+
+    // ─── Section 16: Lazy Loading & Code Splitting ────────────────────
+    {
+      id: 'lazy-loading',
+      title: 'Lazy Loading & Code Splitting',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Code splitting breaks your app into smaller chunks loaded on demand. React.lazy + Suspense let you lazily load components, reducing the initial bundle size. Vite handles the bundling automatically.',
+        },
+        {
+          type: 'heading',
+          content: 'Route-Based Code Splitting',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'App.jsx',
+          code: `import { lazy, Suspense } from 'react';
+import { BrowserRouter, Routes, Route } from 'react-router-dom';
+import SpinnerFullPage from './ui/SpinnerFullPage';
+
+// Lazy load route components — each becomes a separate chunk
+const HomePage = lazy(() => import('./pages/HomePage'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Login = lazy(() => import('./pages/Login'));
+const Settings = lazy(() => import('./pages/Settings'));
+
+function App() {
+  return (
+    <BrowserRouter>
+      <Suspense fallback={<SpinnerFullPage />}>
+        <Routes>
+          <Route path="/" element={<HomePage />} />
+          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/settings" element={<Settings />} />
+        </Routes>
+      </Suspense>
+    </BrowserRouter>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Component-Level Lazy Loading',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          code: `import { lazy, Suspense } from 'react';
+
+// Heavy component loaded only when needed
+const HeavyChart = lazy(() => import('./components/HeavyChart'));
+
+function Dashboard() {
+  const [showChart, setShowChart] = useState(false);
+
+  return (
+    <div>
+      <button onClick={() => setShowChart(true)}>Show Analytics</button>
+      {showChart && (
+        <Suspense fallback={<div>Loading chart...</div>}>
+          <HeavyChart />
+        </Suspense>
+      )}
+    </div>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Vite Chunk Naming',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'vite.config.js',
+          code: `import { defineConfig } from 'vite';
+import react from '@vitejs/plugin-react';
+
+export default defineConfig({
+  plugins: [react()],
+  build: {
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          // Vendor libs in separate chunk (cached independently)
+          vendor: ['react', 'react-dom', 'react-router-dom'],
+        },
+      },
+    },
+  },
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Analyzing Bundle Size',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Install the visualizer
+npm install -D rollup-plugin-visualizer
+
+# Add to vite.config.js
+# import { visualizer } from 'rollup-plugin-visualizer';
+# plugins: [react(), visualizer({ open: true })]
+
+# Build and open the visualization
+npm run build`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Only lazy-load routes and heavy components (charts, editors, maps). Don\'t lazy-load small UI components — the loading flicker is worse than the bundle cost.',
+        },
+      ],
+    },
+
+    // ─── Section 17: Deployment ───────────────────────────────────────
+    {
+      id: 'deployment',
+      title: 'Deployment',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'React apps built with Vite output static files (HTML/CSS/JS) that can be deployed to any static hosting service. The key challenge is handling client-side routing — the server must return index.html for all routes.',
+        },
+        {
+          type: 'heading',
+          content: 'Vercel',
+        },
+        {
+          type: 'code',
+          language: 'json',
+          fileName: 'vercel.json',
+          code: `{
+  "rewrites": [{ "source": "/(.*)", "destination": "/" }]
+}`,
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Deploy with Vercel CLI
+npm i -g vercel
+vercel              # Preview deployment
+vercel --prod       # Production deployment
+
+# Or connect GitHub repo in Vercel dashboard for auto-deploy`,
+        },
+        {
+          type: 'heading',
+          content: 'Netlify',
+        },
+        {
+          type: 'code',
+          language: 'text',
+          fileName: 'public/_redirects',
+          code: `/* /index.html 200`,
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          code: `# Deploy with Netlify CLI
+npm i -g netlify-cli
+netlify deploy --prod --dir=dist
+
+# Or connect GitHub repo in Netlify dashboard`,
+        },
+        {
+          type: 'heading',
+          content: 'GitHub Pages',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'vite.config.js',
+          code: `export default defineConfig({
+  plugins: [react()],
+  base: '/your-repo-name/', // Required for GitHub Pages
+});`,
+        },
+        {
+          type: 'code',
+          language: 'json',
+          fileName: 'package.json — deploy script',
+          code: `{
+  "scripts": {
+    "deploy": "vite build && gh-pages -d dist"
+  },
+  "devDependencies": {
+    "gh-pages": "^6.0.0"
+  }
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Environment Variables in Production',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          fileName: '.env.production',
+          code: `VITE_API_URL=https://api.yourdomain.com/api/v1
+VITE_APP_NAME=MyApp`,
+        },
+        {
+          type: 'list',
+          items: [
+            'Vite only exposes variables prefixed with VITE_ to the browser',
+            'Set env vars in hosting dashboard (Vercel/Netlify) for secrets',
+            '.env.production is used during build, .env.development during dev',
+            'Access with import.meta.env.VITE_API_URL',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Build Optimization Checklist',
+        },
+        {
+          type: 'list',
+          items: [
+            'Run npm run build and check output size',
+            'Lazy-load routes to reduce initial bundle',
+            'Use manualChunks for large vendor libraries',
+            'Compress images and use WebP format',
+            'Enable Gzip/Brotli compression on your hosting (usually automatic)',
+            'Set Cache-Control headers for static assets (Vite adds hashes to filenames)',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'GitHub Pages doesn\'t support client-side routing natively. Use HashRouter instead of BrowserRouter, or add a 404.html redirect hack. Vercel and Netlify handle SPA routing properly.',
+        },
+      ],
+    },
   ],
 }
 

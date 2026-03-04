@@ -2284,6 +2284,503 @@ heroku logs --tail`,
         },
       ],
     },
+
+    // ─── Section 14: File Uploads (Multer) ────────────────────────────
+    {
+      id: 'file-uploads',
+      title: 'File Uploads (Multer)',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Multer is the standard middleware for handling multipart/form-data (file uploads) in Express. It adds a file or files object to the request. Always use memory storage when processing images with Sharp, and disk storage for direct file saving.',
+        },
+        {
+          type: 'heading',
+          content: 'Memory Storage (for image processing)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'middleware/upload.js',
+          code: `const multer = require('multer');
+const sharp = require('sharp');
+const AppError = require('../utils/appError');
+const catchAsync = require('../utils/catchAsync');
+
+// Store in memory as Buffer (for Sharp processing)
+const multerStorage = multer.memoryStorage();
+
+const multerFilter = (req, file, cb) => {
+  if (file.mimetype.startsWith('image')) {
+    cb(null, true);
+  } else {
+    cb(new AppError('Not an image! Please upload only images.', 400), false);
+  }
+};
+
+const upload = multer({
+  storage: multerStorage,
+  fileFilter: multerFilter,
+  limits: { fileSize: 5 * 1024 * 1024 }, // 5 MB
+});
+
+// Single file upload
+exports.uploadUserPhoto = upload.single('photo');
+
+// Multiple files (same field)
+exports.uploadTourImages = upload.array('images', 5);
+
+// Mixed fields
+exports.uploadTourMedia = upload.fields([
+  { name: 'imageCover', maxCount: 1 },
+  { name: 'images', maxCount: 3 },
+]);`,
+        },
+        {
+          type: 'heading',
+          content: 'Image Processing with Sharp',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'controllers/userController.js',
+          code: `exports.resizeUserPhoto = catchAsync(async (req, res, next) => {
+  if (!req.file) return next();
+
+  // Set filename for later use in updateMe handler
+  req.file.filename = \`user-\${req.user.id}-\${Date.now()}.jpeg\`;
+
+  await sharp(req.file.buffer)
+    .resize(500, 500)
+    .toFormat('jpeg')
+    .jpeg({ quality: 90 })
+    .toFile(\`public/img/users/\${req.file.filename}\`);
+
+  next();
+});
+
+// Process multiple images
+exports.resizeTourImages = catchAsync(async (req, res, next) => {
+  if (!req.files?.imageCover || !req.files?.images) return next();
+
+  // Cover image
+  req.body.imageCover = \`tour-\${req.params.id}-cover.jpeg\`;
+  await sharp(req.files.imageCover[0].buffer)
+    .resize(2000, 1333)
+    .toFormat('jpeg')
+    .jpeg({ quality: 90 })
+    .toFile(\`public/img/tours/\${req.body.imageCover}\`);
+
+  // Gallery images
+  req.body.images = await Promise.all(
+    req.files.images.map(async (file, i) => {
+      const filename = \`tour-\${req.params.id}-\${i + 1}.jpeg\`;
+      await sharp(file.buffer)
+        .resize(2000, 1333)
+        .toFormat('jpeg')
+        .jpeg({ quality: 90 })
+        .toFile(\`public/img/tours/\${filename}\`);
+      return filename;
+    })
+  );
+
+  next();
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Disk Storage (direct save)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `const multerStorage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'public/img/users');
+  },
+  filename: (req, file, cb) => {
+    const ext = file.mimetype.split('/')[1];
+    cb(null, \`user-\${req.user.id}-\${Date.now()}.\${ext}\`);
+  },
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Route Setup',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'routes/userRoutes.js',
+          code: `router.patch(
+  '/updateMe',
+  userController.uploadUserPhoto,
+  userController.resizeUserPhoto,
+  userController.updateMe
+);`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'Use memory storage (not disk) when processing with Sharp — disk storage writes then reads the file again, wasting I/O. Memory storage keeps the buffer in RAM for direct processing.',
+        },
+      ],
+    },
+
+    // ─── Section 15: Logging (Winston & Morgan) ───────────────────────
+    {
+      id: 'logging',
+      title: 'Logging (Winston & Morgan)',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Morgan handles HTTP request logging, Winston handles application-level logging. Use both together: Morgan for access logs, Winston for errors, warnings, and custom events.',
+        },
+        {
+          type: 'heading',
+          content: 'Morgan — HTTP Request Logger',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'app.js',
+          code: `const morgan = require('morgan');
+
+// Development: colored concise output
+if (process.env.NODE_ENV === 'development') {
+  app.use(morgan('dev'));
+  // Output: GET /api/v1/tours 200 12.345 ms - 2345
+}
+
+// Production: write to file
+const fs = require('fs');
+const path = require('path');
+
+const accessLogStream = fs.createWriteStream(
+  path.join(__dirname, 'access.log'),
+  { flags: 'a' }
+);
+app.use(morgan('combined', { stream: accessLogStream }));`,
+        },
+        {
+          type: 'heading',
+          content: 'Winston — Application Logger',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'utils/logger.js',
+          code: `const winston = require('winston');
+
+const logger = winston.createLogger({
+  level: process.env.NODE_ENV === 'production' ? 'info' : 'debug',
+  format: winston.format.combine(
+    winston.format.timestamp({ format: 'YYYY-MM-DD HH:mm:ss' }),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  defaultMeta: { service: 'api' },
+  transports: [
+    // Write errors to error.log
+    new winston.transports.File({
+      filename: 'logs/error.log',
+      level: 'error',
+    }),
+    // Write all logs to combined.log
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+  ],
+});
+
+// In development, also log to console with color
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.colorize(),
+        winston.format.simple()
+      ),
+    })
+  );
+}
+
+module.exports = logger;`,
+        },
+        {
+          type: 'heading',
+          content: 'Using the Logger',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `const logger = require('./utils/logger');
+
+// Log levels: error, warn, info, http, verbose, debug, silly
+logger.info('Server started on port 3000');
+logger.error('Database connection failed', { error: err.message });
+logger.warn('Rate limit exceeded', { ip: req.ip });
+logger.debug('Query params', { query: req.query });`,
+        },
+        {
+          type: 'heading',
+          content: 'Replace console.log in Production',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'server.js',
+          code: `const logger = require('./utils/logger');
+
+// Instead of console.log
+const server = app.listen(port, () => {
+  logger.info(\`Server running on port \${port} in \${process.env.NODE_ENV} mode\`);
+});
+
+process.on('unhandledRejection', (err) => {
+  logger.error('UNHANDLED REJECTION', { message: err.message, stack: err.stack });
+  server.close(() => process.exit(1));
+});
+
+process.on('uncaughtException', (err) => {
+  logger.error('UNCAUGHT EXCEPTION', { message: err.message, stack: err.stack });
+  process.exit(1);
+});`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'In production, ship logs to a service like Datadog, Loggly, or AWS CloudWatch using Winston transports. Never rely on console output in production — it disappears when the process restarts.',
+        },
+      ],
+    },
+
+    // ─── Section 16: CORS Deep Dive ───────────────────────────────────
+    {
+      id: 'cors',
+      title: 'CORS Deep Dive',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Cross-Origin Resource Sharing (CORS) controls which domains can access your API. Browsers block cross-origin requests by default — your Express server must explicitly allow them.',
+        },
+        {
+          type: 'heading',
+          content: 'How CORS Works',
+        },
+        {
+          type: 'list',
+          items: [
+            'Simple requests (GET, POST with basic headers) go directly, browser checks the Access-Control-Allow-Origin response header',
+            'Preflight requests (PUT, DELETE, custom headers) trigger an OPTIONS request first — the browser asks the server if the real request is allowed',
+            'The server responds to OPTIONS with allowed methods, headers, and origin — only then does the browser send the real request',
+            'Credentials (cookies, auth headers) require Access-Control-Allow-Credentials: true AND a specific origin (not *)',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Basic Setup',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'app.js',
+          code: `const cors = require('cors');
+
+// Allow all origins (development only!)
+app.use(cors());
+
+// Allow specific origin
+app.use(cors({
+  origin: 'http://localhost:5173',
+}));
+
+// Allow multiple origins
+const allowedOrigins = [
+  'http://localhost:5173',
+  'https://myapp.com',
+  'https://www.myapp.com',
+];
+
+app.use(cors({
+  origin: (origin, callback) => {
+    // Allow requests with no origin (mobile apps, Postman)
+    if (!origin || allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error('Not allowed by CORS'));
+    }
+  },
+}));`,
+        },
+        {
+          type: 'heading',
+          content: 'CORS with Credentials (Cookies)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'app.js — credentials setup',
+          code: `// Backend: must set credentials AND specific origin
+app.use(cors({
+  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  credentials: true,  // Allow cookies to be sent
+}));
+
+// Frontend: must include credentials in fetch
+fetch('http://localhost:3000/api/v1/users/me', {
+  credentials: 'include', // Send cookies cross-origin
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Preflight for Specific Routes',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `// Handle preflight for all routes
+app.options('*', cors());
+
+// Handle preflight for specific route only
+app.options('/api/v1/tours/:id', cors());`,
+        },
+        {
+          type: 'heading',
+          content: 'CORS Headers Explained',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'Manual CORS (without the cors package)',
+          code: `app.use((req, res, next) => {
+  res.setHeader('Access-Control-Allow-Origin', 'http://localhost:5173');
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PATCH, DELETE');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+
+  // Handle preflight
+  if (req.method === 'OPTIONS') {
+    return res.status(204).end();
+  }
+  next();
+});`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'Never use origin: "*" with credentials: true — browsers reject it. When using cookies for auth, you MUST specify the exact origin. Also, sameSite: "none" on cookies requires secure: true (HTTPS).',
+        },
+      ],
+    },
+
+    // ─── Section 17: Rate Limiting ────────────────────────────────────
+    {
+      id: 'rate-limiting',
+      title: 'Rate Limiting',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Rate limiting prevents abuse by restricting how many requests a client can make in a given time window. Essential for login routes, API endpoints, and any public-facing server.',
+        },
+        {
+          type: 'heading',
+          content: 'Global Rate Limiting',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'app.js',
+          code: `const rateLimit = require('express-rate-limit');
+
+// Global limiter: 100 requests per 15 minutes per IP
+const limiter = rateLimit({
+  max: 100,
+  windowMs: 15 * 60 * 1000,
+  message: 'Too many requests from this IP, please try again in 15 minutes.',
+  standardHeaders: true,  // Return rate limit info in RateLimit-* headers
+  legacyHeaders: false,   // Disable X-RateLimit-* headers
+});
+
+app.use('/api', limiter);`,
+        },
+        {
+          type: 'heading',
+          content: 'Stricter Limiter for Auth Routes',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `// Prevent brute force: 10 login attempts per hour
+const loginLimiter = rateLimit({
+  max: 10,
+  windowMs: 60 * 60 * 1000,
+  message: 'Too many login attempts. Please try again in an hour.',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+app.use('/api/v1/users/login', loginLimiter);
+app.use('/api/v1/users/signup', loginLimiter);
+app.use('/api/v1/users/forgotPassword', loginLimiter);`,
+        },
+        {
+          type: 'heading',
+          content: 'Rate Limiting with Redis (Production)',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          fileName: 'For distributed deployments',
+          code: `const RedisStore = require('rate-limit-redis');
+const { createClient } = require('redis');
+
+const redisClient = createClient({
+  url: process.env.REDIS_URL,
+});
+redisClient.connect();
+
+const limiter = rateLimit({
+  store: new RedisStore({
+    sendCommand: (...args) => redisClient.sendCommand(args),
+  }),
+  max: 100,
+  windowMs: 15 * 60 * 1000,
+  standardHeaders: true,
+  legacyHeaders: false,
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Slow Down Instead of Block',
+        },
+        {
+          type: 'code',
+          language: 'javascript',
+          code: `const slowDown = require('express-slow-down');
+
+// After 50 requests, add 500ms delay per request
+const speedLimiter = slowDown({
+  windowMs: 15 * 60 * 1000,
+  delayAfter: 50,
+  delayMs: (hits) => hits * 500,
+});
+
+app.use('/api', speedLimiter);`,
+        },
+        {
+          type: 'tip',
+          variant: 'note',
+          content:
+            'The default in-memory store works for single-server deployments. For multiple servers or containers, use Redis store so rate limits are shared across instances.',
+        },
+      ],
+    },
   ],
 }
 
