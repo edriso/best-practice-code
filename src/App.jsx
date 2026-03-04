@@ -8,7 +8,7 @@ import NotFoundPage from './pages/NotFoundPage'
 
 function App() {
   return (
-    <div className="min-h-screen bg-gray-950 text-gray-100">
+    <div className="min-h-screen bg-bg text-text">
       <ScrollToTop />
       <BackToTop />
       <Navbar />

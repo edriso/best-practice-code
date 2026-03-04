@@ -1,5 +1,43 @@
 @import "tailwindcss";
 
+:root {
+  --bg: #030712;
+  --bg-alt: #111827;
+  --bg-hover: #1f2937;
+  --text: #f3f4f6;
+  --text-body: #d1d5db;
+  --text-sub: #9ca3af;
+  --text-muted: #4b5563;
+  --border: #1f2937;
+  --border-sub: #374151;
+  --scrollbar: #374151;
+}
+
+[data-theme="light"] {
+  --bg: #fafafa;
+  --bg-alt: #f4f4f5;
+  --bg-hover: #f3f4f6;
+  --text: #111827;
+  --text-body: #374151;
+  --text-sub: #6b7280;
+  --text-muted: #9ca3af;
+  --border: #e5e7eb;
+  --border-sub: #d1d5db;
+  --scrollbar: #d1d5db;
+}
+
+@theme {
+  --color-bg: var(--bg);
+  --color-bg-alt: var(--bg-alt);
+  --color-bg-hover: var(--bg-hover);
+  --color-text: var(--text);
+  --color-text-body: var(--text-body);
+  --color-text-sub: var(--text-sub);
+  --color-text-muted: var(--text-muted);
+  --color-border: var(--border);
+  --color-border-sub: var(--border-sub);
+}
+
 html {
   scroll-behavior: smooth;
 }
@@ -14,7 +52,7 @@ aside::-webkit-scrollbar-track {
 }
 
 aside::-webkit-scrollbar-thumb {
-  background: #374151;
+  background: var(--scrollbar);
   border-radius: 2px;
 }
 

@@ -4,6 +4,11 @@ import { BrowserRouter } from 'react-router-dom'
 import './index.css'
 import App from './App.jsx'
 
+// Initialize theme before React renders to avoid flash
+if (localStorage.getItem('theme') === 'light') {
+  document.documentElement.setAttribute('data-theme', 'light')
+}
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <BrowserRouter>

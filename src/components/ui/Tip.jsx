@@ -36,7 +36,7 @@ function Tip({ variant = 'tip', content }) {
           <p className={`text-xs font-semibold uppercase tracking-wider ${v.iconColor} mb-1`}>
             {v.label}
           </p>
-          <p className="text-sm text-gray-300 leading-relaxed">{content}</p>
+          <p className="text-sm text-text-body leading-relaxed">{content}</p>
         </div>
       </div>
     </div>

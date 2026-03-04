@@ -17,16 +17,16 @@ function SectionRenderer({ section, index, isExpanded = true, onToggle }) {
         {isCollapsible && (
           <ChevronRight
             size={18}
-            className={`shrink-0 text-gray-500 transition-transform duration-200 translate-y-0.5 group-hover:text-gray-300 ${
+            className={`shrink-0 text-text-muted transition-transform duration-200 translate-y-0.5 group-hover:text-text-body ${
               isExpanded ? 'rotate-90' : ''
             }`}
           />
         )}
-        <span className="text-sm font-mono text-gray-600">
+        <span className="text-sm font-mono text-text-muted">
           {String(index + 1).padStart(2, '0')}
         </span>
         <h2
-          className={`text-2xl font-bold text-gray-100${
+          className={`text-2xl font-bold text-text${
             isCollapsible ? ' group-hover:text-emerald-400 transition-colors' : ''
           }`}
         >

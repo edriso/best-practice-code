@@ -6,14 +6,14 @@ function PackageList({ packages }) {
       {packages.map((pkg) => (
         <div
           key={pkg.name}
-          className="rounded-lg border border-gray-800 bg-gray-900/50 p-4"
+          className="rounded-lg border border-border bg-bg-alt/50 p-4"
         >
           <div className="flex items-start gap-3">
             <div className="rounded-md bg-blue-500/10 p-2 text-blue-400 shrink-0">
               <Package size={16} />
             </div>
             <div className="min-w-0">
-              <h4 className="font-mono text-sm font-medium text-gray-200">
+              <h4 className="font-mono text-sm font-medium text-text">
                 {pkg.url ? (
                   <a
                     href={pkg.url}
@@ -27,7 +27,7 @@ function PackageList({ packages }) {
                   pkg.name
                 )}
               </h4>
-              <p className="text-xs text-gray-400 mt-1">{pkg.description}</p>
+              <p className="text-xs text-text-sub mt-1">{pkg.description}</p>
             </div>
           </div>
         </div>

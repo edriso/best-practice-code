@@ -6,7 +6,7 @@ import Tip from './Tip'
 function ContentBlock({ block }) {
   switch (block.type) {
     case 'text':
-      return <p className="text-gray-300 leading-relaxed my-3">{block.content}</p>
+      return <p className="text-text-body leading-relaxed my-3">{block.content}</p>
 
     case 'code':
       return (
@@ -28,14 +28,14 @@ function ContentBlock({ block }) {
 
     case 'heading':
       return (
-        <h3 className="text-lg font-semibold text-gray-200 mt-8 mb-3">
+        <h3 className="text-lg font-semibold text-text mt-8 mb-3">
           {block.content}
         </h3>
       )
 
     case 'list':
       return (
-        <ul className="list-disc list-inside space-y-1.5 my-3 text-sm text-gray-300">
+        <ul className="list-disc list-inside space-y-1.5 my-3 text-sm text-text-body">
           {block.items.map((item, i) => (
             <li key={i}>{item}</li>
           ))}

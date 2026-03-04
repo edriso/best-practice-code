@@ -1,19 +1,27 @@
 import { useState, useEffect } from 'react'
-import { Link, useParams, useLocation } from 'react-router-dom'
-import { BookOpen, Menu, X } from 'lucide-react'
-import frameworks from '../../data/frameworks'
+import { Link } from 'react-router-dom'
+import { BookOpen, Sun, Moon } from 'lucide-react'
 
 function Navbar() {
-  const { frameworkId } = useParams()
-  const location = useLocation()
-  const [mobileOpen, setMobileOpen] = useState(false)
+  const [theme, setTheme] = useState(() => {
+    return document.documentElement.getAttribute('data-theme') || 'dark'
+  })
 
   useEffect(() => {
-    setMobileOpen(false)
-  }, [location.pathname])
+    if (theme === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light')
+    } else {
+      document.documentElement.removeAttribute('data-theme')
+    }
+    localStorage.setItem('theme', theme)
+  }, [theme])
+
+  const toggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  }
 
   return (
-    <nav className="sticky top-0 z-50 border-b border-gray-800 bg-gray-950/80 backdrop-blur">
+    <nav className="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
         <Link
           to="/"
@@ -23,57 +31,14 @@ function Navbar() {
           <span className="hidden sm:inline">Best Practice Code</span>
         </Link>
 
-        {/* Desktop nav */}
-        <div className="hidden lg:flex items-center gap-1">
-          {frameworks.map((fw) => (
-            <Link
-              key={fw.id}
-              to={`/${fw.id}`}
-              className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors ${
-                frameworkId === fw.id
-                  ? 'bg-emerald-500/10 text-emerald-400'
-                  : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-              }`}
-            >
-              {fw.name}
-            </Link>
-          ))}
-        </div>
-
-        {/* Mobile hamburger */}
         <button
-          onClick={() => setMobileOpen(!mobileOpen)}
-          className="lg:hidden text-gray-400 hover:text-gray-200 transition-colors"
-          aria-label={mobileOpen ? 'Close menu' : 'Open menu'}
+          onClick={toggleTheme}
+          className="rounded-md p-2 text-text-sub hover:text-text hover:bg-bg-hover transition-colors cursor-pointer"
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
         >
-          {mobileOpen ? <X size={22} /> : <Menu size={22} />}
+          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
         </button>
       </div>
-
-      {/* Mobile dropdown */}
-      {mobileOpen && (
-        <div className="lg:hidden border-t border-gray-800 bg-gray-950/95 backdrop-blur">
-          <div className="px-4 py-3 grid grid-cols-2 gap-1">
-            {frameworks.map((fw) => {
-              const Icon = fw.icon
-              return (
-                <Link
-                  key={fw.id}
-                  to={`/${fw.id}`}
-                  className={`flex items-center gap-2 rounded-md px-3 py-2.5 text-sm font-medium transition-colors ${
-                    frameworkId === fw.id
-                      ? 'bg-emerald-500/10 text-emerald-400'
-                      : 'text-gray-400 hover:text-gray-200 hover:bg-gray-800/50'
-                  }`}
-                >
-                  <Icon size={16} />
-                  {fw.name}
-                </Link>
-              )
-            })}
-          </div>
-        </div>
-      )}
     </nav>
   )
 }

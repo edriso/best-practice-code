@@ -99,14 +99,14 @@ function FrameworkPage() {
       <div className="mb-10">
         <div className="flex items-center justify-between mb-2">
           <div className="flex items-center gap-3">
-            <Icon size={28} className="text-gray-400" />
+            <Icon size={28} className="text-text-sub" />
             <h1 className="text-3xl font-bold">{data.name}</h1>
           </div>
           <button
             onClick={toggleViewMode}
             disabled={isPending}
             title={isCollapsed ? 'Expand all sections' : 'Collapse all sections'}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-text-sub hover:text-text bg-bg-hover/50 hover:bg-bg-hover border border-border-sub/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
           >
             {isPending ? (
               <>
@@ -126,8 +126,8 @@ function FrameworkPage() {
             )}
           </button>
         </div>
-        <p className="text-gray-400">{data.description}</p>
-        <p className="text-sm text-gray-600 mt-1">{data.sections.length} sections</p>
+        <p className="text-text-sub">{data.description}</p>
+        <p className="text-sm text-text-muted mt-1">{data.sections.length} sections</p>
       </div>
       {data.sections.map((section, index) => (
         <SectionRenderer

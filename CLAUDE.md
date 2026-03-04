@@ -19,13 +19,13 @@ Adding a new framework = one new data file in `src/data/` + one entry in `src/da
 
 ```
 src/
-  main.jsx                    # BrowserRouter wrapper
+  main.jsx                    # BrowserRouter wrapper + theme init
   App.jsx                     # Root layout: Navbar + Routes
-  index.css                   # Tailwind + custom styles
+  index.css                   # Tailwind + custom styles + theme variables
 
   components/
     layout/
-      Navbar.jsx              # Top bar with framework tabs
+      Navbar.jsx              # Top bar with logo + theme toggle
       Sidebar.jsx             # Left sidebar TOC with scroll spy
       DocLayout.jsx           # Sidebar + content grid wrapper
     ui/
@@ -89,6 +89,14 @@ export default {
   ]
 }
 ```
+
+## Theming
+
+Light/dark theme using CSS custom properties + Tailwind v4 `@theme`. Variables defined in `index.css` (`:root` for dark, `[data-theme="light"]` for light). Dark is the default.
+
+- Toggle via `data-theme="light"` on `<html>`, persisted in `localStorage` key `theme`
+- Semantic color classes: `bg-bg`, `bg-bg-alt`, `bg-bg-hover`, `text-text`, `text-text-body`, `text-text-sub`, `text-text-muted`, `border-border`, `border-border-sub`
+- Code blocks (`CodeBlock`, `FolderTree`, `CopyButton`) stay dark in both themes
 
 ## Conventions
 

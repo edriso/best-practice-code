@@ -69,13 +69,13 @@ function HomePage() {
           <Code size={32} className="text-emerald-400" />
         </div>
         <h1 className="text-4xl font-bold mb-4">Best Practice Code</h1>
-        <p className="text-lg text-gray-400 max-w-2xl mx-auto">
+        <p className="text-lg text-text-sub max-w-2xl mx-auto">
           A personal reference for best practices, folder structures, conventions,
           packages, and code patterns for web frameworks.
         </p>
       </div>
 
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-6">
+      <h2 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-6">
         Frameworks
       </h2>
 
@@ -89,7 +89,7 @@ function HomePage() {
             <Link
               key={fw.id}
               to={`/${fw.id}`}
-              className={`group block rounded-xl border border-gray-800 bg-gray-900 p-6 transition ${colors.hoverBorder} hover:bg-gray-900/80`}
+              className={`group block rounded-xl border border-border bg-bg-alt p-6 transition ${colors.hoverBorder} hover:bg-bg-alt/80`}
             >
               <div className="flex items-start justify-between mb-4">
                 <div className={`inline-flex rounded-lg ${colors.iconBg} p-3 ${colors.iconText}`}>
@@ -104,7 +104,7 @@ function HomePage() {
               <h3 className={`text-xl font-semibold mb-2 ${colors.hoverText} transition-colors`}>
                 {fw.name}
               </h3>
-              <p className="text-sm text-gray-400">{fw.description}</p>
+              <p className="text-sm text-text-sub">{fw.description}</p>
             </Link>
           )
         })}

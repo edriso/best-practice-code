@@ -13,12 +13,12 @@ function MobileNav({ sections }) {
   }
 
   return (
-    <div className="sticky top-16 z-40 lg:hidden border-b border-gray-800 bg-gray-950/90 backdrop-blur px-4 py-2">
+    <div className="sticky top-16 z-40 lg:hidden border-b border-border bg-bg/90 backdrop-blur px-4 py-2">
       <div className="relative">
         <select
           value={activeId || sectionIds[0]}
           onChange={handleChange}
-          className="w-full appearance-none rounded-md bg-gray-900 border border-gray-700 text-sm text-gray-200 pl-3 pr-9 py-2 focus:outline-none focus:border-emerald-500 transition-colors"
+          className="w-full appearance-none rounded-md bg-bg-alt border border-border-sub text-sm text-text pl-3 pr-9 py-2 focus:outline-none focus:border-emerald-500 transition-colors"
         >
           {sections.map((section, index) => (
             <option key={section.id} value={section.id}>
@@ -28,7 +28,7 @@ function MobileNav({ sections }) {
         </select>
         <ChevronDown
           size={16}
-          className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+          className="absolute right-3 top-1/2 -translate-y-1/2 text-text-sub pointer-events-none"
         />
       </div>
     </div>
