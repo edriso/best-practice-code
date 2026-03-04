@@ -60,7 +60,7 @@ function Navbar({ onSearchOpen, onShortcutsOpen }) {
           className="flex items-center gap-2 text-lg font-bold hover:text-accent transition-colors"
         >
           <BookOpen size={20} />
-          <span className="hidden sm:inline">Best Practice Code</span>
+          <span className="hidden sm:inline">DevRef</span>
         </Link>
 
         <div className="flex items-center gap-1">

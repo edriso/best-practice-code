@@ -116,7 +116,7 @@ function HomePage() {
           <div className="inline-flex rounded-full bg-accent/10 p-4 mb-6">
             <Code size={32} className="text-accent" />
           </div>
-          <h1 className="text-4xl font-bold mb-4">Best Practice Code</h1>
+          <h1 className="text-4xl font-bold mb-4">DevRef</h1>
           <p className="text-lg text-text-sub max-w-2xl mx-auto">
             A personal reference for best practices, folder structures, conventions,
             packages, and code patterns for web development.

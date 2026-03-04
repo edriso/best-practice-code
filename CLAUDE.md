@@ -1,4 +1,4 @@
-# Best Practice Code
+# DevRef
 
 A personal reference web app — a "cheat sheet" site for quickly looking up best practices, folder structures, conventions, packages, and code patterns for web development.
 
