@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import { Menu, X } from 'lucide-react'
 import useActiveSection from '../../hooks/useActiveSection'
 
@@ -33,25 +34,14 @@ function MobileNav({ sections }) {
   const activeSection = sections.find((s) => s.id === activeId)
   const activeIndex = sections.findIndex((s) => s.id === activeId)
 
-  return (
-    <div className="sticky top-16 z-40 lg:hidden border-b border-border bg-bg/90 backdrop-blur">
-      <button
-        onClick={() => setOpen(true)}
-        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-sub hover:text-text transition-colors cursor-pointer"
-        aria-label="Open section menu"
-      >
-        <Menu size={16} className="shrink-0" />
-        <span className="truncate">
-          {activeSection
-            ? `${String(activeIndex + 1).padStart(2, '0')} — ${activeSection.title}`
-            : 'Sections'}
-        </span>
-      </button>
-
+  // Portal the drawer/backdrop to document.body so they escape the
+  // sticky container's backdrop-blur stacking context
+  const drawer = createPortal(
+    <>
       {/* Backdrop */}
       {open && (
         <div
-          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm lg:hidden"
           onClick={() => setOpen(false)}
           aria-hidden="true"
         />
@@ -59,7 +49,7 @@ function MobileNav({ sections }) {
 
       {/* Drawer */}
       <div
-        className={`fixed top-0 left-0 z-50 h-full w-72 bg-bg border-r border-border transform transition-transform duration-250 ease-out ${
+        className={`fixed top-0 left-0 z-50 h-full w-72 bg-bg border-r border-border transform transition-transform duration-250 ease-out lg:hidden ${
           open ? 'translate-x-0' : '-translate-x-full'
         }`}
         role="dialog"
@@ -96,6 +86,26 @@ function MobileNav({ sections }) {
           ))}
         </nav>
       </div>
+    </>,
+    document.body
+  )
+
+  return (
+    <div className="sticky top-16 z-40 lg:hidden border-b border-border bg-bg/90 backdrop-blur">
+      <button
+        onClick={() => setOpen(true)}
+        className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-text-sub hover:text-text transition-colors cursor-pointer"
+        aria-label="Open section menu"
+      >
+        <Menu size={16} className="shrink-0" />
+        <span className="truncate">
+          {activeSection
+            ? `${String(activeIndex + 1).padStart(2, '0')} — ${activeSection.title}`
+            : 'Sections'}
+        </span>
+      </button>
+
+      {drawer}
     </div>
   )
 }
