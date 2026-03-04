@@ -1,4 +1,4 @@
-import { Server, Atom, Layers, Braces, Paintbrush, FileCode, Database, Shield, FlaskConical, GitBranch, Cpu, Globe } from 'lucide-react'
+import { Server, Atom, Layers, Braces, Paintbrush, FileCode, Database, Shield, FlaskConical, GitBranch, Cpu, Globe, Network } from 'lucide-react'
 
 const topics = [
   // ─── Full Stack ─────────────────────────────────────────────────
@@ -24,7 +24,7 @@ const topics = [
     name: 'Next.js',
     description: 'App Router, server components, data fetching, and full-stack React patterns',
     icon: Globe,
-    color: 'slate',
+    color: 'indigo',
     related: ['react', 'typescript', 'mern', 'nodejs'],
   },
   // ─── Backend ────────────────────────────────────────────────────
@@ -70,6 +70,14 @@ const topics = [
     related: ['javascript', 'react', 'express', 'testing'],
   },
   // ─── Web Fundamentals ──────────────────────────────────────────
+  {
+    id: 'web-concepts',
+    name: 'Web Concepts',
+    description: 'HTTP, security, DNS, caching, authentication, and how the internet works',
+    icon: Network,
+    color: 'slate',
+    related: ['express', 'nodejs', 'mern', 'html'],
+  },
   {
     id: 'html',
     name: 'HTML Semantic',

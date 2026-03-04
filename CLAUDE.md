@@ -44,16 +44,17 @@ src/
   data/
     topics.js                 # Registry: { id, name, description, icon, color }
     mern.js                   # MERN Stack content (17 sections)
-    react.js                  # React.js content (18 sections)
+    react.js                  # React.js content (21 sections)
     nextjs.js                 # Next.js App Router content (13 sections)
     nodejs.js                 # Node.js core content (14 sections)
-    express.js                # Express.js content (18 sections)
+    express.js                # Express.js content (24 sections)
     databases.js              # Databases with Express.js content (17 sections)
     javascript.js             # JavaScript & OOP content (13 sections)
     typescript.js             # TypeScript content (14 sections)
     html.js                   # HTML Semantic content (11 sections)
     css.js                    # Advanced CSS content (13 sections)
     testing.js                # Testing content (13 sections)
+    web-concepts.js           # Web Concepts content (15 sections)
     git.js                    # Git & GitHub content (13 sections)
 
   pages/

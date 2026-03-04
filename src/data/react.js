@@ -452,8 +452,9 @@ export { CitiesProvider, useCities };`,
             'useState — Simple local state (form inputs, toggles, counters)',
             'useReducer — Complex local state with multiple related values and actions',
             'Context API + useReducer — App-wide state shared across many components (auth, theme)',
-            'Redux Toolkit — Large apps with complex global state and frequent updates',
-            'React Query — Server state (API data that needs caching, refetching, syncing)',
+            'Zustand — Lightweight global state with minimal boilerplate (modern Redux alternative)',
+            'Redux Toolkit — Large apps with complex global state, middleware, and devtools ecosystem',
+            'React Query / TanStack Query — Server state (API data that needs caching, refetching, syncing)',
           ],
         },
         {
@@ -2659,6 +2660,604 @@ VITE_APP_NAME=MyApp`,
           variant: 'warning',
           content:
             'GitHub Pages doesn\'t support client-side routing natively. Use HashRouter instead of BrowserRouter, or add a 404.html redirect hack. Vercel and Netlify handle SPA routing properly.',
+        },
+      ],
+    },
+
+    // ─── Section 19: Zustand State Management ───────────────────────
+    {
+      id: 'zustand',
+      title: 'Zustand State Management',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Zustand is a lightweight state management library that\'s become the most popular alternative to Redux. It has minimal boilerplate, no providers/wrappers needed, and works with React\'s concurrent features out of the box.',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'zustand',
+              description: 'Small, fast, scalable state management for React — no boilerplate, no providers',
+              url: 'https://www.npmjs.com/package/zustand',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Basic Store',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'stores/useCartStore.js',
+          code: `import { create } from 'zustand';
+
+const useCartStore = create((set, get) => ({
+  // State
+  items: [],
+  isOpen: false,
+
+  // Actions
+  addItem: (product) =>
+    set((state) => {
+      const existing = state.items.find((i) => i.id === product.id);
+      if (existing) {
+        return {
+          items: state.items.map((i) =>
+            i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i
+          ),
+        };
+      }
+      return { items: [...state.items, { ...product, quantity: 1 }] };
+    }),
+
+  removeItem: (id) =>
+    set((state) => ({
+      items: state.items.filter((i) => i.id !== id),
+    })),
+
+  clearCart: () => set({ items: [] }),
+
+  toggleCart: () => set((state) => ({ isOpen: !state.isOpen })),
+
+  // Computed values using get()
+  get totalItems() {
+    return get().items.reduce((sum, i) => sum + i.quantity, 0);
+  },
+
+  get totalPrice() {
+    return get().items.reduce((sum, i) => sum + i.price * i.quantity, 0);
+  },
+}));
+
+export default useCartStore;`,
+        },
+        {
+          type: 'heading',
+          content: 'Using the Store in Components',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'components/CartIcon.jsx',
+          code: `import useCartStore from '../stores/useCartStore';
+
+function CartIcon() {
+  // Subscribe to specific state (component only re-renders when this value changes)
+  const totalItems = useCartStore((state) => state.totalItems);
+  const toggleCart = useCartStore((state) => state.toggleCart);
+
+  return (
+    <button onClick={toggleCart}>
+      Cart ({totalItems})
+    </button>
+  );
+}
+
+// You can also destructure multiple values (but this re-renders on ANY change)
+function CartPage() {
+  const { items, removeItem, clearCart, totalPrice } = useCartStore();
+
+  return (
+    <div>
+      {items.map((item) => (
+        <div key={item.id}>
+          {item.name} x{item.quantity}
+          <button onClick={() => removeItem(item.id)}>Remove</button>
+        </div>
+      ))}
+      <p>Total: \${totalPrice}</p>
+      <button onClick={clearCart}>Clear Cart</button>
+    </div>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Persist State to localStorage',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'stores/useSettingsStore.js',
+          code: `import { create } from 'zustand';
+import { persist } from 'zustand/middleware';
+
+const useSettingsStore = create(
+  persist(
+    (set) => ({
+      theme: 'dark',
+      language: 'en',
+      setTheme: (theme) => set({ theme }),
+      setLanguage: (language) => set({ language }),
+    }),
+    {
+      name: 'settings', // localStorage key
+    }
+  )
+);
+
+export default useSettingsStore;`,
+        },
+        {
+          type: 'heading',
+          content: 'Async Actions (API Calls)',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'stores/useAuthStore.js',
+          code: `import { create } from 'zustand';
+
+const useAuthStore = create((set) => ({
+  user: null,
+  isLoading: false,
+  error: null,
+
+  login: async (email, password) => {
+    set({ isLoading: true, error: null });
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message);
+      set({ user: data.user, isLoading: false });
+    } catch (err) {
+      set({ error: err.message, isLoading: false });
+    }
+  },
+
+  logout: () => set({ user: null }),
+}));
+
+export default useAuthStore;`,
+        },
+        {
+          type: 'heading',
+          content: 'Zustand vs Context vs Redux',
+        },
+        {
+          type: 'list',
+          items: [
+            'Zustand — Minimal boilerplate, no Provider wrapper needed, great performance with selectors, tiny bundle (~1KB)',
+            'Context API — Built into React, no extra dependency. But causes all consumers to re-render on any state change',
+            'Redux Toolkit — Powerful devtools, middleware ecosystem, time-travel debugging. Best for very large apps with complex state interactions',
+            'For most MERN apps, Zustand + React Query is the sweet spot: Zustand for client state (UI, auth), React Query for server state (API data)',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Use selectors to prevent unnecessary re-renders: useStore(s => s.count) only re-renders when count changes. Avoid destructuring the whole store: const { ...everything } = useStore() re-renders on ANY state change.',
+        },
+      ],
+    },
+
+    // ─── Section 20: Shadcn/ui Component Library ────────────────────
+    {
+      id: 'shadcn-ui',
+      title: 'Shadcn/ui Component Library',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Shadcn/ui is not a traditional component library — it gives you copy-paste components that you own and can customize. Components are added directly to your codebase (not installed from npm), built on Radix UI primitives and styled with Tailwind CSS.',
+        },
+        {
+          type: 'heading',
+          content: 'Setup with Vite + React',
+        },
+        {
+          type: 'code',
+          language: 'bash',
+          fileName: 'Initialize shadcn/ui',
+          code: `# Initialize shadcn/ui in your project
+npx shadcn@latest init
+
+# It will ask you:
+# - Style: Default or New York
+# - Base color: Slate, Gray, Zinc, Neutral, or Stone
+# - CSS variables for theming: Yes (recommended)
+
+# Add components one at a time
+npx shadcn@latest add button
+npx shadcn@latest add card
+npx shadcn@latest add dialog
+npx shadcn@latest add input
+npx shadcn@latest add dropdown-menu
+npx shadcn@latest add toast
+npx shadcn@latest add table
+npx shadcn@latest add form      # includes react-hook-form + zod integration`,
+        },
+        {
+          type: 'heading',
+          content: 'Project Structure After Setup',
+        },
+        {
+          type: 'folder-tree',
+          tree: {
+            name: 'src',
+            children: [
+              {
+                name: 'components',
+                children: [
+                  {
+                    name: 'ui',
+                    comment: 'Shadcn components (you own these)',
+                    children: [
+                      { name: 'button.jsx' },
+                      { name: 'card.jsx' },
+                      { name: 'dialog.jsx' },
+                      { name: 'input.jsx' },
+                      { name: 'dropdown-menu.jsx' },
+                      { name: 'toast.jsx' },
+                    ],
+                  },
+                  {
+                    name: 'features',
+                    comment: 'Your app components using shadcn',
+                    children: [
+                      { name: 'LoginForm.jsx' },
+                      { name: 'UserTable.jsx' },
+                      { name: 'Dashboard.jsx' },
+                    ],
+                  },
+                ],
+              },
+              {
+                name: 'lib',
+                children: [
+                  { name: 'utils.js', comment: 'cn() helper from shadcn' },
+                ],
+              },
+            ],
+          },
+        },
+        {
+          type: 'heading',
+          content: 'Using Components',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'Example usage',
+          code: `import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
+
+function Dashboard() {
+  return (
+    <div className="grid gap-4 md:grid-cols-3">
+      <Card>
+        <CardHeader>
+          <CardTitle>Total Users</CardTitle>
+          <CardDescription>Last 30 days</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <p className="text-3xl font-bold">1,234</p>
+        </CardContent>
+      </Card>
+
+      <Dialog>
+        <DialogTrigger asChild>
+          <Button variant="outline">Create User</Button>
+        </DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>New User</DialogTitle>
+            <DialogDescription>Fill in the details below.</DialogDescription>
+          </DialogHeader>
+          {/* Form content here */}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Forms with shadcn + React Hook Form + Zod',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'features/auth/LoginForm.jsx',
+          code: `import { useForm } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import {
+  Form,
+  FormControl,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+
+const loginSchema = z.object({
+  email: z.string().email('Invalid email address'),
+  password: z.string().min(8, 'Password must be at least 8 characters'),
+});
+
+function LoginForm() {
+  const form = useForm({
+    resolver: zodResolver(loginSchema),
+    defaultValues: { email: '', password: '' },
+  });
+
+  function onSubmit(values) {
+    // values is fully typed and validated
+    console.log(values);
+  }
+
+  return (
+    <Form {...form}>
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+        <FormField
+          control={form.control}
+          name="email"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Email</FormLabel>
+              <FormControl>
+                <Input placeholder="john@example.com" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <FormField
+          control={form.control}
+          name="password"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Password</FormLabel>
+              <FormControl>
+                <Input type="password" {...field} />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+        <Button type="submit" className="w-full">Sign In</Button>
+      </form>
+    </Form>
+  );
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'The cn() Utility',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'lib/utils.js',
+          code: `import { clsx } from 'clsx';
+import { twMerge } from 'tailwind-merge';
+
+// Combines clsx (conditional classes) with tailwind-merge (deduplication)
+export function cn(...inputs) {
+  return twMerge(clsx(inputs));
+}
+
+// Usage:
+<div className={cn(
+  'rounded-lg border p-4',              // base styles
+  isActive && 'border-primary bg-primary/10', // conditional
+  className                               // allow overrides from props
+)} />`,
+        },
+        {
+          type: 'heading',
+          content: 'Why Shadcn/ui Over Traditional Libraries',
+        },
+        {
+          type: 'list',
+          items: [
+            'You own the code — components live in your repo. Customize anything without fighting the library',
+            'No version conflicts — since it\'s your code, updates don\'t break things',
+            'Accessible by default — built on Radix UI primitives (keyboard nav, screen readers, focus management)',
+            'Tailwind native — uses your Tailwind config, theme, and utility classes. No separate theming system',
+            'Tree-shakeable — only add the components you actually use. No bloated bundle',
+            'Copy-paste, not install — "npx shadcn add button" copies the component to your project',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'The modern MERN stack combo: React + Vite + Tailwind + Shadcn/ui (components) + Zustand (client state) + React Query (server state) + React Hook Form + Zod (forms/validation). This covers 90% of frontend needs with minimal boilerplate.',
+        },
+      ],
+    },
+
+    // ─── Section 21: Modern React Ecosystem ─────────────────────────
+    {
+      id: 'modern-ecosystem',
+      title: 'Modern React Ecosystem',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'The React ecosystem has evolved significantly. Here\'s a curated list of the most widely-adopted libraries for production MERN applications, organized by category.',
+        },
+        {
+          type: 'heading',
+          content: 'UI & Components',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'shadcn/ui',
+              description: 'Copy-paste components built on Radix UI + Tailwind. You own the code',
+              url: 'https://ui.shadcn.com',
+            },
+            {
+              name: '@radix-ui/react-*',
+              description: 'Unstyled, accessible UI primitives (Dialog, Dropdown, Tooltip, etc.)',
+              url: 'https://www.radix-ui.com',
+            },
+            {
+              name: 'lucide-react',
+              description: 'Beautiful, consistent icon library with 1500+ icons. Tree-shakeable',
+              url: 'https://lucide.dev',
+            },
+            {
+              name: 'framer-motion',
+              description: 'Production-ready animations and gestures. Declarative API for React',
+              url: 'https://www.npmjs.com/package/framer-motion',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'State & Data',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'zustand',
+              description: 'Minimal client state management (~1KB). No providers, no boilerplate',
+              url: 'https://www.npmjs.com/package/zustand',
+            },
+            {
+              name: '@tanstack/react-query',
+              description: 'Server state management — caching, refetching, mutations, devtools',
+              url: 'https://tanstack.com/query',
+            },
+            {
+              name: 'axios',
+              description: 'HTTP client with interceptors, request cancellation, and automatic transforms',
+              url: 'https://www.npmjs.com/package/axios',
+            },
+            {
+              name: 'socket.io-client',
+              description: 'Real-time client for WebSocket communication with auto-reconnect',
+              url: 'https://www.npmjs.com/package/socket.io-client',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Forms & Validation',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'react-hook-form',
+              description: 'Performant forms with minimal re-renders. Best DX for complex forms',
+              url: 'https://www.npmjs.com/package/react-hook-form',
+            },
+            {
+              name: 'zod',
+              description: 'TypeScript-first schema validation. Works perfectly with React Hook Form',
+              url: 'https://www.npmjs.com/package/zod',
+            },
+            {
+              name: '@hookform/resolvers',
+              description: 'Connects React Hook Form with Zod, Yup, or Joi validation schemas',
+              url: 'https://www.npmjs.com/package/@hookform/resolvers',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Tables, Lists & Dates',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: '@tanstack/react-table',
+              description: 'Headless table library — sorting, filtering, pagination, virtualization',
+              url: 'https://tanstack.com/table',
+            },
+            {
+              name: '@tanstack/react-virtual',
+              description: 'Virtualize large lists (10K+ items). Only renders visible rows',
+              url: 'https://tanstack.com/virtual',
+            },
+            {
+              name: 'date-fns',
+              description: 'Modern date utility library. Tree-shakeable alternative to Moment.js',
+              url: 'https://www.npmjs.com/package/date-fns',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Auth & Utilities',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'next-auth',
+              description: 'Authentication for Next.js — OAuth, credentials, sessions out of the box',
+              url: 'https://www.npmjs.com/package/next-auth',
+            },
+            {
+              name: 'react-hot-toast',
+              description: 'Lightweight toast notifications with beautiful defaults',
+              url: 'https://www.npmjs.com/package/react-hot-toast',
+            },
+            {
+              name: 'recharts',
+              description: 'Composable chart library built on D3. Bar, line, pie, area charts',
+              url: 'https://www.npmjs.com/package/recharts',
+            },
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Don\'t install everything at once. Start with the essentials (React Query + Zustand + React Hook Form) and add libraries as you need them. Every dependency is a maintenance cost.',
         },
       ],
     },

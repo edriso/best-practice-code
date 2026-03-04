@@ -32,18 +32,19 @@ npm install
 npm run dev
 ```
 
-## Topics (12)
+## Topics (13)
 
 | Topic | Sections | Description |
 |-------|----------|-------------|
 | MERN Stack | 17 | Full-stack MongoDB, Express, React, Node.js project patterns |
-| React.js | 18 | Component patterns, hooks, state management, routing, performance |
+| React.js | 21 | Components, hooks, Zustand, Shadcn/ui, React Query, routing, performance |
 | Next.js | 13 | App Router, server components, data fetching, full-stack React |
 | Node.js | 14 | Event loop, streams, file system, runtime fundamentals |
-| Express.js | 18 | MVC setup, routing, middleware, auth, security, deployment |
+| Express.js | 24 | Routing, middleware, auth, payments (Stripe), chat (Socket.io), streaming, webhooks |
 | Databases | 17 | SQL & NoSQL, PostgreSQL, Prisma, Sequelize, MongoDB patterns |
 | JavaScript & OOP | 13 | Classes, closures, async/await, modules, DOM, error handling |
 | TypeScript | 14 | Types, interfaces, generics, React & Express patterns |
+| Web Concepts | 15 | HTTP, CORS, security threats, cookies/JWT, caching, DNS, deployment |
 | HTML Semantic | 11 | Semantic elements, accessibility, forms, SEO, structured data |
 | Advanced CSS | 13 | Sass, BEM, Grid, Flexbox, animations, custom properties |
 | Testing | 13 | Unit, integration, and E2E testing for MERN apps |

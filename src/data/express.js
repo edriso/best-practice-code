@@ -2781,6 +2781,830 @@ app.use('/api', speedLimiter);`,
         },
       ],
     },
+
+    // ─── Section 19: Payment Integration (Stripe) ────────────────────
+    {
+      id: 'payment-integration',
+      title: 'Payment Integration (Stripe)',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Stripe is the most popular payment processor for web apps. The flow is: your frontend creates a checkout session via your backend → Stripe hosts the payment page → Stripe sends a webhook to confirm payment.',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'stripe',
+              description: 'Official Stripe Node.js SDK for payments, subscriptions, and invoices',
+              url: 'https://www.npmjs.com/package/stripe',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Create a Checkout Session',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'controllers/paymentController.js',
+          code: `import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// Create a Stripe Checkout session (redirects user to Stripe's hosted page)
+export const createCheckoutSession = async (req, res, next) => {
+  const { items } = req.body;
+
+  const session = await stripe.checkout.sessions.create({
+    payment_method_types: ['card'],
+    mode: 'payment', // 'payment' for one-time, 'subscription' for recurring
+    customer_email: req.user.email,
+    client_reference_id: req.user.id,
+
+    line_items: items.map((item) => ({
+      price_data: {
+        currency: 'usd',
+        product_data: {
+          name: item.name,
+          images: [item.image],
+        },
+        unit_amount: item.price * 100, // Stripe uses cents
+      },
+      quantity: item.quantity,
+    })),
+
+    success_url: \`\${process.env.CLIENT_URL}/order/success?session_id={CHECKOUT_SESSION_ID}\`,
+    cancel_url: \`\${process.env.CLIENT_URL}/cart\`,
+  });
+
+  res.status(200).json({ url: session.url });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'Handle Stripe Webhooks',
+        },
+        {
+          type: 'text',
+          content:
+            'Webhooks are how Stripe tells your server that a payment succeeded. Never trust the frontend for payment confirmation — always verify via webhooks.',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'controllers/webhookController.js',
+          code: `import Stripe from 'stripe';
+
+const stripe = new Stripe(process.env.STRIPE_SECRET_KEY);
+
+// IMPORTANT: Use express.raw() for this route, NOT express.json()
+export const stripeWebhook = (req, res) => {
+  const sig = req.headers['stripe-signature'];
+  let event;
+
+  try {
+    event = stripe.webhooks.constructEvent(
+      req.body,           // raw body buffer
+      sig,
+      process.env.STRIPE_WEBHOOK_SECRET
+    );
+  } catch (err) {
+    console.error('Webhook signature verification failed:', err.message);
+    return res.status(400).send(\`Webhook Error: \${err.message}\`);
+  }
+
+  // Handle the event
+  switch (event.type) {
+    case 'checkout.session.completed': {
+      const session = event.data.object;
+      // Fulfill the order: save to DB, send email, etc.
+      console.log('Payment successful for:', session.customer_email);
+      break;
+    }
+    case 'invoice.payment_failed': {
+      // Handle failed subscription payment
+      break;
+    }
+    default:
+      console.log(\`Unhandled event type: \${event.type}\`);
+  }
+
+  res.status(200).json({ received: true });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'Route Setup',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'app.js',
+          code: `// Webhook route MUST use raw body (before express.json middleware)
+app.post(
+  '/api/webhook/stripe',
+  express.raw({ type: 'application/json' }),
+  stripeWebhook
+);
+
+// Regular JSON parsing for all other routes
+app.use(express.json());
+
+// Payment routes (protected)
+app.use('/api/payments', protect, paymentRoutes);`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'The webhook route MUST receive the raw request body (not parsed JSON) for signature verification. Place it before express.json() middleware, or use express.raw() specifically for that route.',
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Use Stripe CLI to test webhooks locally: stripe listen --forward-to localhost:3000/api/webhook/stripe. It gives you a temporary webhook secret for development.',
+        },
+      ],
+    },
+
+    // ─── Section 20: Real-time Chat (Socket.io) ─────────────────────
+    {
+      id: 'real-time-chat',
+      title: 'Real-time Chat (Socket.io)',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Socket.io enables real-time, bidirectional communication between client and server. It uses WebSockets under the hood but falls back to HTTP long-polling if WebSockets are unavailable.',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'socket.io',
+              description: 'Server-side real-time engine for Node.js',
+              url: 'https://www.npmjs.com/package/socket.io',
+            },
+            {
+              name: 'socket.io-client',
+              description: 'Client-side Socket.io library for React/browser',
+              url: 'https://www.npmjs.com/package/socket.io-client',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Server Setup',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'server.js',
+          code: `import { createServer } from 'http';
+import { Server } from 'socket.io';
+import app from './app.js';
+
+const httpServer = createServer(app);
+
+const io = new Server(httpServer, {
+  cors: {
+    origin: process.env.CLIENT_URL,
+    methods: ['GET', 'POST'],
+  },
+});
+
+// Middleware: authenticate socket connections
+io.use((socket, next) => {
+  const token = socket.handshake.auth.token;
+  try {
+    const user = verifyToken(token); // your JWT verify function
+    socket.user = user;
+    next();
+  } catch (err) {
+    next(new Error('Authentication failed'));
+  }
+});
+
+io.on('connection', (socket) => {
+  console.log(\`User connected: \${socket.user.name}\`);
+
+  // Join a chat room
+  socket.on('joinRoom', (roomId) => {
+    socket.join(roomId);
+    socket.to(roomId).emit('userJoined', {
+      user: socket.user.name,
+      message: \`\${socket.user.name} joined the room\`,
+    });
+  });
+
+  // Handle incoming messages
+  socket.on('sendMessage', ({ roomId, message }) => {
+    io.to(roomId).emit('newMessage', {
+      user: socket.user.name,
+      message,
+      timestamp: new Date(),
+    });
+  });
+
+  // Typing indicator
+  socket.on('typing', ({ roomId }) => {
+    socket.to(roomId).emit('userTyping', { user: socket.user.name });
+  });
+
+  socket.on('disconnect', () => {
+    console.log(\`User disconnected: \${socket.user.name}\`);
+  });
+});
+
+const PORT = process.env.PORT || 3000;
+httpServer.listen(PORT, () => console.log(\`Server running on port \${PORT}\`));`,
+        },
+        {
+          type: 'heading',
+          content: 'React Client',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'hooks/useChat.js',
+          code: `import { useEffect, useState, useRef } from 'react';
+import { io } from 'socket.io-client';
+
+export function useChat(roomId, token) {
+  const [messages, setMessages] = useState([]);
+  const socketRef = useRef(null);
+
+  useEffect(() => {
+    const socket = io(import.meta.env.VITE_API_URL, {
+      auth: { token },
+    });
+
+    socketRef.current = socket;
+
+    socket.emit('joinRoom', roomId);
+
+    socket.on('newMessage', (msg) => {
+      setMessages((prev) => [...prev, msg]);
+    });
+
+    socket.on('userTyping', ({ user }) => {
+      // Show typing indicator
+    });
+
+    return () => socket.disconnect();
+  }, [roomId, token]);
+
+  const sendMessage = (message) => {
+    socketRef.current?.emit('sendMessage', { roomId, message });
+  };
+
+  return { messages, sendMessage };
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Key Concepts',
+        },
+        {
+          type: 'list',
+          items: [
+            'Rooms — group sockets together (e.g., chat rooms, game lobbies). Use socket.join(roomId)',
+            'Namespaces — separate communication channels on the same connection (e.g., /chat, /notifications)',
+            'socket.emit() — send to the sender only',
+            'socket.to(room).emit() — send to everyone in the room EXCEPT the sender',
+            'io.to(room).emit() — send to everyone in the room INCLUDING the sender',
+            'socket.broadcast.emit() — send to everyone EXCEPT the sender (all rooms)',
+          ],
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'For production, use the Redis adapter (@socket.io/redis-adapter) so Socket.io works across multiple server instances behind a load balancer.',
+        },
+      ],
+    },
+
+    // ─── Section 21: Server-Sent Events & Streaming ──────────────────
+    {
+      id: 'streaming-sse',
+      title: 'Server-Sent Events & Streaming',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Server-Sent Events (SSE) allow the server to push updates to the client over a single HTTP connection. Unlike WebSockets, SSE is one-directional (server → client) and works over regular HTTP. Great for live feeds, notifications, and progress updates.',
+        },
+        {
+          type: 'heading',
+          content: 'SSE vs WebSockets — When to Use What',
+        },
+        {
+          type: 'list',
+          items: [
+            'SSE — One-way server → client updates (notifications, live feeds, progress bars, stock prices)',
+            'WebSockets — Two-way communication needed (chat, multiplayer games, collaborative editing)',
+            'SSE is simpler, auto-reconnects, works through proxies/firewalls, and uses standard HTTP',
+            'WebSockets require a protocol upgrade and more complex server setup',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'SSE Endpoint',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'controllers/notificationController.js',
+          code: `// Server-Sent Events endpoint for live notifications
+export const streamNotifications = (req, res) => {
+  // Set SSE headers
+  res.writeHead(200, {
+    'Content-Type': 'text/event-stream',
+    'Cache-Control': 'no-cache',
+    Connection: 'keep-alive',
+  });
+
+  // Send a comment to keep connection alive (every 30s)
+  const keepAlive = setInterval(() => {
+    res.write(': keep-alive\\n\\n');
+  }, 30000);
+
+  // Send data to client
+  const sendEvent = (data, eventName = 'message') => {
+    res.write(\`event: \${eventName}\\n\`);
+    res.write(\`data: \${JSON.stringify(data)}\\n\\n\`);
+  };
+
+  // Example: send initial data
+  sendEvent({ message: 'Connected to notifications' }, 'connected');
+
+  // Listen for new notifications (from your app logic)
+  const onNotification = (notification) => {
+    sendEvent(notification, 'notification');
+  };
+
+  // Subscribe to events (using EventEmitter, Redis pub/sub, etc.)
+  notificationEmitter.on('new', onNotification);
+
+  // Cleanup on client disconnect
+  req.on('close', () => {
+    clearInterval(keepAlive);
+    notificationEmitter.off('new', onNotification);
+    res.end();
+  });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'React Client with EventSource',
+        },
+        {
+          type: 'code',
+          language: 'jsx',
+          fileName: 'hooks/useSSE.js',
+          code: `import { useEffect, useState } from 'react';
+
+export function useSSE(url) {
+  const [data, setData] = useState(null);
+  const [error, setError] = useState(null);
+
+  useEffect(() => {
+    const eventSource = new EventSource(url, {
+      withCredentials: true, // if you need cookies
+    });
+
+    eventSource.addEventListener('notification', (e) => {
+      setData(JSON.parse(e.data));
+    });
+
+    eventSource.onerror = (err) => {
+      setError(err);
+      eventSource.close();
+    };
+
+    // EventSource auto-reconnects on connection loss
+
+    return () => eventSource.close();
+  }, [url]);
+
+  return { data, error };
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Streaming Large Responses',
+        },
+        {
+          type: 'text',
+          content:
+            'For streaming large files or AI-generated text, use Node.js streams to send data in chunks without loading everything into memory.',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'Streaming a file download',
+          code: `import { createReadStream } from 'fs';
+import { pipeline } from 'stream/promises';
+
+export const downloadLargeFile = async (req, res) => {
+  const filePath = \`./exports/\${req.params.filename}\`;
+
+  res.setHeader('Content-Type', 'application/octet-stream');
+  res.setHeader('Content-Disposition', \`attachment; filename="\${req.params.filename}"\`);
+
+  // Stream file to response (memory efficient)
+  const fileStream = createReadStream(filePath);
+  await pipeline(fileStream, res);
+};`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'SSE messages follow a simple text format: "event: eventName\\ndata: your data\\n\\n". The double newline signals the end of a message. The browser\'s EventSource API handles parsing automatically.',
+        },
+      ],
+    },
+
+    // ─── Section 22: Email Sending ───────────────────────────────────
+    {
+      id: 'email-sending',
+      title: 'Email Sending',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Most apps need to send emails: welcome emails, password resets, order confirmations, etc. Use Nodemailer for sending and a template engine for pretty HTML emails.',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'nodemailer',
+              description: 'The standard Node.js library for sending emails via SMTP',
+              url: 'https://www.npmjs.com/package/nodemailer',
+            },
+            {
+              name: 'html-to-text',
+              description: 'Convert HTML emails to plain text fallback for accessibility',
+              url: 'https://www.npmjs.com/package/html-to-text',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Reusable Email Service Class',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'utils/email.js',
+          code: `import nodemailer from 'nodemailer';
+import { convert } from 'html-to-text';
+
+export class Email {
+  constructor(user, url) {
+    this.to = user.email;
+    this.firstName = user.name.split(' ')[0];
+    this.url = url;
+    this.from = \`Your App <\${process.env.EMAIL_FROM}>\`;
+  }
+
+  // Use different transports for dev vs production
+  createTransport() {
+    if (process.env.NODE_ENV === 'production') {
+      // Production: use a real service (SendGrid, Mailgun, SES, etc.)
+      return nodemailer.createTransport({
+        service: 'SendGrid',
+        auth: {
+          user: process.env.SENDGRID_USERNAME,
+          pass: process.env.SENDGRID_PASSWORD,
+        },
+      });
+    }
+
+    // Development: use Mailtrap to catch emails
+    return nodemailer.createTransport({
+      host: process.env.EMAIL_HOST,
+      port: process.env.EMAIL_PORT,
+      auth: {
+        user: process.env.EMAIL_USERNAME,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    });
+  }
+
+  async send(subject, html) {
+    const mailOptions = {
+      from: this.from,
+      to: this.to,
+      subject,
+      html,
+      text: convert(html), // plain text fallback
+    };
+
+    await this.createTransport().sendMail(mailOptions);
+  }
+
+  async sendWelcome() {
+    const html = \`
+      <h1>Welcome, \${this.firstName}!</h1>
+      <p>We're glad to have you on board.</p>
+      <a href="\${this.url}">Get Started</a>
+    \`;
+    await this.send('Welcome to Our App!', html);
+  }
+
+  async sendPasswordReset() {
+    const html = \`
+      <h1>Password Reset</h1>
+      <p>Click below to reset your password (valid for 10 minutes):</p>
+      <a href="\${this.url}">Reset Password</a>
+      <p>If you didn't request this, please ignore this email.</p>
+    \`;
+    await this.send('Password Reset Request', html);
+  }
+}`,
+        },
+        {
+          type: 'heading',
+          content: 'Usage in Controllers',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'controllers/authController.js',
+          code: `import { Email } from '../utils/email.js';
+
+export const signup = async (req, res) => {
+  const user = await User.create(req.body);
+  const url = \`\${process.env.CLIENT_URL}/profile\`;
+
+  await new Email(user, url).sendWelcome();
+
+  res.status(201).json({ status: 'success', data: { user } });
+};
+
+export const forgotPassword = async (req, res) => {
+  const user = await User.findOne({ email: req.body.email });
+  if (!user) return res.status(404).json({ message: 'No user with that email' });
+
+  const resetToken = user.createPasswordResetToken();
+  await user.save({ validateBeforeSave: false });
+
+  const resetURL = \`\${process.env.CLIENT_URL}/reset-password/\${resetToken}\`;
+  await new Email(user, resetURL).sendPasswordReset();
+
+  res.status(200).json({ message: 'Reset link sent to email' });
+};`,
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Use Mailtrap (mailtrap.io) during development to catch all outgoing emails without sending them to real addresses. Switch to SendGrid, Mailgun, or AWS SES for production.',
+        },
+      ],
+    },
+
+    // ─── Section 23: Background Jobs & Queues ────────────────────────
+    {
+      id: 'background-jobs',
+      title: 'Background Jobs & Queues',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Some tasks are too slow for a request-response cycle: sending emails, processing images, generating reports, etc. Move these to a background job queue so the user gets an instant response while the work happens asynchronously.',
+        },
+        {
+          type: 'package-list',
+          packages: [
+            {
+              name: 'bullmq',
+              description: 'Modern Redis-based job queue for Node.js (successor to Bull)',
+              url: 'https://www.npmjs.com/package/bullmq',
+            },
+            {
+              name: 'node-cron',
+              description: 'Simple cron-like scheduler for recurring tasks (no Redis needed)',
+              url: 'https://www.npmjs.com/package/node-cron',
+            },
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'BullMQ — Producer (Add Jobs)',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'queues/emailQueue.js',
+          code: `import { Queue } from 'bullmq';
+
+const emailQueue = new Queue('email', {
+  connection: { host: 'localhost', port: 6379 },
+});
+
+// Add a job to the queue
+export const queueEmail = async (to, subject, html) => {
+  await emailQueue.add('sendEmail', { to, subject, html }, {
+    attempts: 3,           // retry up to 3 times on failure
+    backoff: {
+      type: 'exponential',
+      delay: 2000,         // 2s, 4s, 8s between retries
+    },
+    removeOnComplete: 100, // keep last 100 completed jobs
+    removeOnFail: 50,      // keep last 50 failed jobs
+  });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'BullMQ — Worker (Process Jobs)',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'workers/emailWorker.js',
+          code: `import { Worker } from 'bullmq';
+import nodemailer from 'nodemailer';
+
+const worker = new Worker('email', async (job) => {
+  const { to, subject, html } = job.data;
+
+  const transporter = nodemailer.createTransport({ /* config */ });
+
+  await transporter.sendMail({
+    from: process.env.EMAIL_FROM,
+    to,
+    subject,
+    html,
+  });
+
+  console.log(\`Email sent to \${to}\`);
+}, {
+  connection: { host: 'localhost', port: 6379 },
+  concurrency: 5, // process 5 jobs simultaneously
+});
+
+worker.on('failed', (job, err) => {
+  console.error(\`Job \${job.id} failed: \${err.message}\`);
+});`,
+        },
+        {
+          type: 'heading',
+          content: 'Simple Cron Jobs (No Redis)',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'cron/cleanupJob.js',
+          code: `import cron from 'node-cron';
+
+// Run every day at 2:00 AM — clean up expired tokens
+cron.schedule('0 2 * * *', async () => {
+  console.log('Running daily cleanup...');
+  await Token.deleteMany({ expiresAt: { $lt: new Date() } });
+});
+
+// Cron format: second(optional) minute hour day-of-month month day-of-week
+// '*/5 * * * *'  → every 5 minutes
+// '0 9 * * 1'    → every Monday at 9 AM
+// '0 0 1 * *'    → first day of every month at midnight`,
+        },
+        {
+          type: 'tip',
+          variant: 'note',
+          content:
+            'BullMQ requires Redis. For simple apps without Redis, node-cron works for scheduled tasks but doesn\'t support job retries or distributed processing.',
+        },
+      ],
+    },
+
+    // ─── Section 24: Webhooks ────────────────────────────────────────
+    {
+      id: 'webhooks',
+      title: 'Webhooks',
+      blocks: [
+        {
+          type: 'text',
+          content:
+            'Webhooks are HTTP callbacks — when an event happens in an external service (Stripe payment, GitHub push, Twilio SMS), that service sends a POST request to your server. Think of it as "don\'t call us, we\'ll call you."',
+        },
+        {
+          type: 'heading',
+          content: 'How Webhooks Work',
+        },
+        {
+          type: 'list',
+          items: [
+            '1. You register a webhook URL with the external service (e.g., https://yourapp.com/api/webhooks/stripe)',
+            '2. When an event occurs, the service sends a POST request to your URL with event data',
+            '3. Your server receives the request, verifies it\'s authentic, and processes the event',
+            '4. You respond with 200 OK to acknowledge receipt (otherwise the service retries)',
+          ],
+        },
+        {
+          type: 'heading',
+          content: 'Building a Webhook Receiver',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'controllers/webhookController.js',
+          code: `import crypto from 'crypto';
+
+// Verify webhook signature to ensure it's from the expected sender
+function verifySignature(payload, signature, secret) {
+  const expected = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  return crypto.timingSafeEqual(
+    Buffer.from(signature),
+    Buffer.from(expected)
+  );
+}
+
+export const handleGitHubWebhook = (req, res) => {
+  const signature = req.headers['x-hub-signature-256']?.replace('sha256=', '');
+
+  if (!verifySignature(JSON.stringify(req.body), signature, process.env.GITHUB_WEBHOOK_SECRET)) {
+    return res.status(401).json({ message: 'Invalid signature' });
+  }
+
+  const event = req.headers['x-github-event'];
+
+  switch (event) {
+    case 'push':
+      console.log('New push to:', req.body.repository.full_name);
+      // Trigger deployment, run tests, etc.
+      break;
+    case 'pull_request':
+      console.log('PR action:', req.body.action);
+      break;
+    default:
+      console.log('Unhandled event:', event);
+  }
+
+  res.status(200).json({ received: true });
+};`,
+        },
+        {
+          type: 'heading',
+          content: 'Sending Webhooks from Your App',
+        },
+        {
+          type: 'code',
+          language: 'js',
+          fileName: 'utils/webhook.js',
+          code: `import crypto from 'crypto';
+
+export async function sendWebhook(url, data, secret) {
+  const payload = JSON.stringify(data);
+
+  const signature = crypto
+    .createHmac('sha256', secret)
+    .update(payload)
+    .digest('hex');
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Webhook-Signature': signature,
+      'X-Webhook-Timestamp': Date.now().toString(),
+    },
+    body: payload,
+  });
+
+  if (!response.ok) {
+    // Retry logic: queue for retry with exponential backoff
+    throw new Error(\`Webhook failed: \${response.status}\`);
+  }
+}`,
+        },
+        {
+          type: 'tip',
+          variant: 'warning',
+          content:
+            'Always verify webhook signatures. Without verification, anyone could send fake events to your webhook URL. Use HMAC-SHA256 with a shared secret.',
+        },
+        {
+          type: 'tip',
+          variant: 'tip',
+          content:
+            'Use ngrok or Cloudflare Tunnel to expose your local server during development so external services can reach your webhook endpoints.',
+        },
+      ],
+    },
   ],
 }
 

@@ -94,6 +94,13 @@ const colorMap = {
     hoverText: 'group-hover:text-slate-400',
     badge: 'bg-slate-500/10 text-slate-400',
   },
+  indigo: {
+    iconBg: 'bg-indigo-500/10',
+    iconText: 'text-indigo-400',
+    hoverBorder: 'hover:border-indigo-500/50',
+    hoverText: 'group-hover:text-indigo-400',
+    badge: 'bg-indigo-500/10 text-indigo-400',
+  },
 }
 
 function HomePage() {
