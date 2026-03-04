@@ -1,5 +1,6 @@
 import { useParams, Link } from 'react-router-dom'
 import { useState, useMemo, useEffect, useCallback, useTransition } from 'react'
+import { flushSync } from 'react-dom'
 import { ListCollapse, List, Loader2 } from 'lucide-react'
 import topics from '../data/topics'
 import DocLayout from '../components/layout/DocLayout'
@@ -70,7 +71,11 @@ function TopicPage() {
     function handleHashChange() {
       const hash = window.location.hash.slice(1)
       if (hash && viewMode === 'collapsed') {
-        setExpandedSection(hash)
+        // flushSync forces React to render synchronously so the DOM
+        // layout is correct before we scroll (collapsing the previous
+        // section shifts everything above the target)
+        flushSync(() => setExpandedSection(hash))
+        document.getElementById(hash)?.scrollIntoView({ behavior: 'smooth' })
       }
     }
 
@@ -79,7 +84,8 @@ function TopicPage() {
     // Also handle initial hash on mount
     const initialHash = window.location.hash.slice(1)
     if (initialHash && viewMode === 'collapsed') {
-      setExpandedSection(initialHash)
+      flushSync(() => setExpandedSection(initialHash))
+      document.getElementById(initialHash)?.scrollIntoView({ behavior: 'smooth' })
     }
 
     return () => window.removeEventListener('hashchange', handleHashChange)

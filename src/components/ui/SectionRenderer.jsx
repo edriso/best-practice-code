@@ -29,7 +29,7 @@ function SectionRenderer({ section, index, isExpanded = true, onToggle }) {
   const isCollapsible = typeof onToggle === 'function'
 
   return (
-    <section id={section.id} className="mb-16 scroll-mt-32 lg:scroll-mt-24">
+    <section id={section.id} className="mb-16 scroll-mt-36 lg:scroll-mt-28">
       <div
         className={`flex items-center gap-3 mb-6 group${
           isCollapsible
