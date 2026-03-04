@@ -1,6 +1,6 @@
 import { useParams } from 'react-router-dom'
-import { useState, useMemo, useEffect, useCallback } from 'react'
-import { ListCollapse, List } from 'lucide-react'
+import { useState, useMemo, useEffect, useCallback, useTransition } from 'react'
+import { ListCollapse, List, Loader2 } from 'lucide-react'
 import frameworks from '../data/frameworks'
 import DocLayout from '../components/layout/DocLayout'
 import SectionRenderer from '../components/ui/SectionRenderer'
@@ -79,8 +79,12 @@ function FrameworkPage() {
     })
   }, [])
 
+  const [isPending, startTransition] = useTransition()
+
   const toggleViewMode = useCallback(() => {
-    setViewMode((prev) => (prev === 'collapsed' ? 'expanded' : 'collapsed'))
+    startTransition(() => {
+      setViewMode((prev) => (prev === 'collapsed' ? 'expanded' : 'collapsed'))
+    })
   }, [])
 
   if (!framework || !data) {
@@ -100,10 +104,16 @@ function FrameworkPage() {
           </div>
           <button
             onClick={toggleViewMode}
+            disabled={isPending}
             title={isCollapsed ? 'Expand all sections' : 'Collapse all sections'}
-            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 transition-colors cursor-pointer"
+            className="flex items-center gap-1.5 rounded-md px-3 py-1.5 text-sm text-gray-400 hover:text-gray-200 bg-gray-800/50 hover:bg-gray-800 border border-gray-700/50 transition-colors cursor-pointer disabled:opacity-50 disabled:cursor-wait"
           >
-            {isCollapsed ? (
+            {isPending ? (
+              <>
+                <Loader2 size={16} className="animate-spin" />
+                <span className="hidden sm:inline">Loading…</span>
+              </>
+            ) : isCollapsed ? (
               <>
                 <List size={16} />
                 <span className="hidden sm:inline">Expand All</span>
