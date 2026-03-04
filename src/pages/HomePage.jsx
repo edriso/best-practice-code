@@ -92,7 +92,7 @@ const colorMap = {
 function HomePage() {
   return (
     <main className="max-w-5xl mx-auto px-6 py-20">
-      <div className="text-center mb-16">
+      <div className="text-center mb-16 animate-fade-up">
         <div className="inline-flex rounded-full bg-emerald-500/10 p-4 mb-6">
           <Code size={32} className="text-emerald-400" />
         </div>
@@ -107,7 +107,7 @@ function HomePage() {
         Topics
       </h2>
 
-      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-6 sm:grid-cols-2 lg:grid-cols-3 card-stagger">
         {topics.map((fw) => {
           const Icon = fw.icon
           const colors = colorMap[fw.color] || colorMap.emerald

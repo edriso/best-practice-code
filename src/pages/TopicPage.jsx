@@ -1,4 +1,4 @@
-import { useParams } from 'react-router-dom'
+import { useParams, Link } from 'react-router-dom'
 import { useState, useMemo, useEffect, useCallback, useTransition } from 'react'
 import { ListCollapse, List, Loader2 } from 'lucide-react'
 import topics from '../data/topics'
@@ -87,6 +87,46 @@ function TopicPage() {
     })
   }, [])
 
+  // j/k keyboard navigation between sections
+  useEffect(() => {
+    if (!data) return
+
+    const handleKeyDown = (e) => {
+      // Don't capture when typing in inputs or when search is open
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return
+
+      if (e.key === 'j' || e.key === 'k') {
+        e.preventDefault()
+        const ids = data.sections.map((s) => s.id)
+
+        // Find which section is currently in view
+        let currentIdx = 0
+        for (let i = 0; i < ids.length; i++) {
+          const el = document.getElementById(ids[i])
+          if (el && el.getBoundingClientRect().top <= 150) {
+            currentIdx = i
+          }
+        }
+
+        const nextIdx = e.key === 'j'
+          ? Math.min(currentIdx + 1, ids.length - 1)
+          : Math.max(currentIdx - 1, 0)
+
+        const target = document.getElementById(ids[nextIdx])
+        if (target) {
+          // In collapsed mode, expand the target section
+          if (viewMode === 'collapsed') {
+            setExpandedSection(ids[nextIdx])
+          }
+          target.scrollIntoView({ behavior: 'smooth' })
+        }
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [data, viewMode])
+
   if (!topic || !data) {
     return <NotFoundPage />
   }
@@ -138,6 +178,30 @@ function TopicPage() {
           onToggle={isCollapsed ? handleToggleSection : undefined}
         />
       ))}
+      {topic.related?.length > 0 && (
+        <div className="mt-20 pt-10 border-t border-border">
+          <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wider mb-4">
+            Related Topics
+          </h3>
+          <div className="flex flex-wrap gap-3">
+            {topic.related.map((relatedId) => {
+              const related = topics.find((t) => t.id === relatedId)
+              if (!related) return null
+              const RelIcon = related.icon
+              return (
+                <Link
+                  key={relatedId}
+                  to={`/${relatedId}`}
+                  className="flex items-center gap-2 rounded-lg border border-border bg-bg-alt/50 px-4 py-2.5 text-sm text-text-sub hover:text-text hover:border-border-sub hover:bg-bg-alt transition-colors"
+                >
+                  <RelIcon size={16} />
+                  {related.name}
+                </Link>
+              )
+            })}
+          </div>
+        </div>
+      )}
     </DocLayout>
   )
 }

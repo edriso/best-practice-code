@@ -1,24 +1,56 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { BookOpen, Sun, Moon } from 'lucide-react'
+import { BookOpen, Sun, Moon, Monitor, Search } from 'lucide-react'
 
-function Navbar() {
-  const [theme, setTheme] = useState(() => {
-    return document.documentElement.getAttribute('data-theme') || 'dark'
+function getSystemTheme() {
+  return window.matchMedia('(prefers-color-scheme: light)').matches ? 'light' : 'dark'
+}
+
+function applyTheme(preference) {
+  const resolved = preference === 'auto' ? getSystemTheme() : preference
+  if (resolved === 'light') {
+    document.documentElement.setAttribute('data-theme', 'light')
+  } else {
+    document.documentElement.removeAttribute('data-theme')
+  }
+}
+
+function Navbar({ onSearchOpen }) {
+  const [preference, setPreference] = useState(() => {
+    return localStorage.getItem('theme') || 'dark'
   })
 
   useEffect(() => {
-    if (theme === 'light') {
-      document.documentElement.setAttribute('data-theme', 'light')
-    } else {
-      document.documentElement.removeAttribute('data-theme')
-    }
-    localStorage.setItem('theme', theme)
-  }, [theme])
+    applyTheme(preference)
+    localStorage.setItem('theme', preference)
+  }, [preference])
 
-  const toggleTheme = () => {
-    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'))
+  // Listen for system theme changes when in auto mode
+  useEffect(() => {
+    if (preference !== 'auto') return
+
+    const mq = window.matchMedia('(prefers-color-scheme: light)')
+    const handler = () => applyTheme('auto')
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [preference])
+
+  const cycleTheme = () => {
+    setPreference((prev) => {
+      if (prev === 'dark') return 'light'
+      if (prev === 'light') return 'auto'
+      return 'dark'
+    })
   }
+
+  const icon = preference === 'dark' ? Sun : preference === 'light' ? Moon : Monitor
+  const Icon = icon
+  const label =
+    preference === 'dark'
+      ? 'Switch to light mode'
+      : preference === 'light'
+        ? 'Switch to auto mode'
+        : 'Switch to dark mode'
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-bg/80 backdrop-blur">
@@ -31,13 +63,35 @@ function Navbar() {
           <span className="hidden sm:inline">Best Practice Code</span>
         </Link>
 
-        <button
-          onClick={toggleTheme}
-          className="rounded-md p-2 text-text-sub hover:text-text hover:bg-bg-hover transition-colors cursor-pointer"
-          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-        >
-          {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
-        </button>
+        <div className="flex items-center gap-1">
+          {/* Search button */}
+          <button
+            onClick={onSearchOpen}
+            className="flex items-center gap-2 rounded-md px-3 py-1.5 text-sm text-text-muted hover:text-text hover:bg-bg-hover transition-colors cursor-pointer"
+            aria-label="Search"
+          >
+            <Search size={16} />
+            <span className="hidden sm:inline text-xs">Search</span>
+            <kbd className="hidden sm:inline rounded border border-border-sub px-1.5 py-0.5 text-[10px] font-mono text-text-muted">
+              ⌘K
+            </kbd>
+          </button>
+
+          {/* Theme toggle */}
+          <button
+            onClick={cycleTheme}
+            className="relative rounded-md p-2 text-text-sub hover:text-text hover:bg-bg-hover transition-colors cursor-pointer"
+            aria-label={label}
+            title={label}
+          >
+            <Icon size={20} />
+            {preference === 'auto' && (
+              <span className="absolute -bottom-0.5 left-1/2 -translate-x-1/2 text-[8px] font-bold text-text-muted leading-none">
+                A
+              </span>
+            )}
+          </button>
+        </div>
       </div>
     </nav>
   )

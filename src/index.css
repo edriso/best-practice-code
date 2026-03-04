@@ -43,6 +43,103 @@ html {
   scroll-behavior: smooth;
 }
 
+/* ─── Accessibility ──────────────────────────────────────────────── */
+
+/* Skip to content link */
+.skip-link {
+  position: absolute;
+  top: -100%;
+  left: 1rem;
+  z-index: 100;
+  padding: 0.5rem 1rem;
+  border-radius: 0.375rem;
+  background: var(--bg-alt);
+  border: 1px solid var(--border-sub);
+  color: var(--text);
+  font-size: 0.875rem;
+  font-weight: 500;
+  text-decoration: none;
+  transition: top 0.15s;
+}
+
+.skip-link:focus {
+  top: 1rem;
+}
+
+/* Better focus rings */
+:focus-visible {
+  outline: 2px solid #10b981;
+  outline-offset: 2px;
+}
+
+/* Respect reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* ─── Entrance animations ────────────────────────────────────────── */
+
+@keyframes fade-up {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.animate-fade-up {
+  animation: fade-up 0.4s ease-out both;
+}
+
+/* Staggered card animation */
+.card-stagger > * {
+  animation: fade-up 0.4s ease-out both;
+}
+
+.card-stagger > *:nth-child(1) { animation-delay: 0ms; }
+.card-stagger > *:nth-child(2) { animation-delay: 50ms; }
+.card-stagger > *:nth-child(3) { animation-delay: 100ms; }
+.card-stagger > *:nth-child(4) { animation-delay: 150ms; }
+.card-stagger > *:nth-child(5) { animation-delay: 200ms; }
+.card-stagger > *:nth-child(6) { animation-delay: 250ms; }
+.card-stagger > *:nth-child(7) { animation-delay: 300ms; }
+.card-stagger > *:nth-child(8) { animation-delay: 350ms; }
+.card-stagger > *:nth-child(9) { animation-delay: 400ms; }
+.card-stagger > *:nth-child(10) { animation-delay: 450ms; }
+.card-stagger > *:nth-child(11) { animation-delay: 500ms; }
+.card-stagger > *:nth-child(12) { animation-delay: 550ms; }
+
+/* Section content reveal */
+@keyframes section-reveal {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.section-content {
+  animation: section-reveal 0.25s ease-out both;
+}
+
+/* ─── Scrollbar ──────────────────────────────────────────────────── */
+
 /* Custom scrollbar for sidebar */
 aside::-webkit-scrollbar {
   width: 4px;
@@ -71,7 +168,8 @@ pre::-webkit-scrollbar-thumb {
   border-radius: 3px;
 }
 
-/* react-syntax-highlighter overrides */
+/* ─── Syntax highlighter overrides ───────────────────────────────── */
+
 code[class*="language-"],
 pre[class*="language-"] {
   font-family: "JetBrains Mono", "Fira Code", "Cascadia Code", ui-monospace, monospace !important;

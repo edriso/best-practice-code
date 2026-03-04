@@ -5,7 +5,15 @@ import './index.css'
 import App from './App.jsx'
 
 // Initialize theme before React renders to avoid flash
-if (localStorage.getItem('theme') === 'light') {
+const themePref = localStorage.getItem('theme') || 'dark'
+const resolved =
+  themePref === 'auto'
+    ? window.matchMedia('(prefers-color-scheme: light)').matches
+      ? 'light'
+      : 'dark'
+    : themePref
+
+if (resolved === 'light') {
   document.documentElement.setAttribute('data-theme', 'light')
 }
 

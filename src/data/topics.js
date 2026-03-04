@@ -8,6 +8,7 @@ const topics = [
     description: 'Full-stack MongoDB, Express, React, Node.js project patterns',
     icon: Layers,
     color: 'violet',
+    related: ['react', 'express', 'nodejs', 'databases'],
   },
   // ─── Frontend ───────────────────────────────────────────────────
   {
@@ -16,6 +17,7 @@ const topics = [
     description: 'A JavaScript library for building user interfaces with components',
     icon: Atom,
     color: 'cyan',
+    related: ['typescript', 'mern', 'css', 'testing'],
   },
   // ─── Backend ────────────────────────────────────────────────────
   {
@@ -24,6 +26,7 @@ const topics = [
     description: 'Core Node.js concepts, event loop, streams, file system, and runtime fundamentals',
     icon: Cpu,
     color: 'lime',
+    related: ['express', 'mern', 'javascript', 'typescript'],
   },
   {
     id: 'express',
@@ -31,6 +34,7 @@ const topics = [
     description: 'Fast, unopinionated, minimalist web framework for Node.js',
     icon: Server,
     color: 'emerald',
+    related: ['nodejs', 'databases', 'mern', 'typescript'],
   },
   {
     id: 'databases',
@@ -38,6 +42,7 @@ const topics = [
     description: 'SQL & NoSQL database patterns, ORMs, query builders, and connection management',
     icon: Database,
     color: 'teal',
+    related: ['express', 'mern', 'nodejs'],
   },
   // ─── Languages ──────────────────────────────────────────────────
   {
@@ -46,6 +51,7 @@ const topics = [
     description: 'Core JavaScript patterns, OOP, async programming, and modern syntax',
     icon: Braces,
     color: 'yellow',
+    related: ['typescript', 'nodejs', 'react'],
   },
   {
     id: 'typescript',
@@ -53,6 +59,7 @@ const topics = [
     description: 'Type safety, interfaces, generics, and TypeScript patterns for React and Express',
     icon: Shield,
     color: 'blue',
+    related: ['javascript', 'react', 'express', 'testing'],
   },
   // ─── Web Fundamentals ──────────────────────────────────────────
   {
@@ -61,6 +68,7 @@ const topics = [
     description: 'Semantic elements, accessibility, forms, meta tags, and structured markup',
     icon: FileCode,
     color: 'orange',
+    related: ['css', 'react', 'javascript'],
   },
   {
     id: 'css',
@@ -68,6 +76,7 @@ const topics = [
     description: 'Sass architecture, BEM, responsive design, Grid, Flexbox, and animations',
     icon: Paintbrush,
     color: 'pink',
+    related: ['html', 'react'],
   },
   // ─── Tooling ────────────────────────────────────────────────────
   {
@@ -76,6 +85,7 @@ const topics = [
     description: 'Unit testing, integration testing, and E2E testing patterns for MERN applications',
     icon: FlaskConical,
     color: 'rose',
+    related: ['react', 'express', 'typescript', 'git'],
   },
   {
     id: 'git',
@@ -83,6 +93,7 @@ const topics = [
     description: 'Version control workflows, branching strategies, and GitHub collaboration patterns',
     icon: GitBranch,
     color: 'red',
+    related: ['testing', 'mern'],
   },
 ]
 
