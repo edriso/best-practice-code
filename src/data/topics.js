@@ -1,4 +1,4 @@
-import { Server, Atom, Layers, Braces, Paintbrush, FileCode, Database, Shield, FlaskConical, GitBranch, Cpu, Globe, Network, Share2, Zap } from 'lucide-react'
+import { Server, Atom, Layers, Braces, Paintbrush, FileCode, Database, Shield, FlaskConical, GitBranch, Cpu, Globe, Network, Share2, Zap, ShoppingBag } from 'lucide-react'
 
 const topics = [
   // ─── Full Stack ─────────────────────────────────────────────────
@@ -26,6 +26,15 @@ const topics = [
     icon: Globe,
     color: 'indigo',
     related: ['react', 'typescript', 'mern', 'nodejs'],
+  },
+  // ─── Commerce ───────────────────────────────────────────────────
+  {
+    id: 'shopify',
+    name: 'Shopify',
+    description: 'Liquid templating, Online Store 2.0 themes, metafields, apps, Storefront API, and headless commerce with Hydrogen',
+    icon: ShoppingBag,
+    color: 'lime',
+    related: ['react', 'nextjs', 'graphql', 'css'],
   },
   // ─── Backend ────────────────────────────────────────────────────
   {
