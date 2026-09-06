@@ -51,7 +51,7 @@ function App() {
       <ScrollToTop />
       <BackToTop />
       <Navbar onSearchOpen={() => setSearchOpen(true)} onShortcutsOpen={() => setShortcutsOpen(true)} />
-      <SearchModal open={searchOpen} onClose={() => setSearchOpen(false)} />
+      {searchOpen && <SearchModal open onClose={() => setSearchOpen(false)} />}
       <KeyboardShortcuts open={shortcutsOpen} onClose={() => setShortcutsOpen(false)} />
       <div id="main-content">
         <Routes>

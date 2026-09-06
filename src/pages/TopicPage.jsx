@@ -36,6 +36,10 @@ function getTopicData(id) {
 
 function TopicPage() {
   const { topicId } = useParams()
+  return <TopicContent key={topicId} topicId={topicId} />
+}
+
+function TopicContent({ topicId }) {
   const topic = topics.find((t) => t.id === topicId)
   const data = useMemo(() => getTopicData(topicId), [topicId])
 
@@ -48,15 +52,8 @@ function TopicPage() {
   })
 
   const [expandedSection, setExpandedSection] = useState(
-    () => data?.sections[0]?.id || null
+    () => window.location.hash.slice(1) || data?.sections[0]?.id || null
   )
-
-  // Reset expanded section when switching topics
-  useEffect(() => {
-    if (data) {
-      setExpandedSection(data.sections[0]?.id || null)
-    }
-  }, [data])
 
   // Persist viewMode to localStorage
   useEffect(() => {
@@ -85,7 +82,6 @@ function TopicPage() {
     // Also handle initial hash on mount
     const initialHash = window.location.hash.slice(1)
     if (initialHash && viewMode === 'collapsed') {
-      flushSync(() => setExpandedSection(initialHash))
       document.getElementById(initialHash)?.scrollIntoView({ behavior: 'smooth' })
     }
 

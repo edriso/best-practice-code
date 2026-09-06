@@ -45,13 +45,7 @@ function SearchModal({ open, onClose }) {
   }, [query])
 
   useEffect(() => {
-    setSelectedIndex(0)
-  }, [results])
-
-  useEffect(() => {
     if (open) {
-      setQuery('')
-      setSelectedIndex(0)
       // Focus input on next frame
       requestAnimationFrame(() => inputRef.current?.focus())
     }
@@ -113,7 +107,10 @@ function SearchModal({ open, onClose }) {
             ref={inputRef}
             type="text"
             value={query}
-            onChange={(e) => setQuery(e.target.value)}
+            onChange={(e) => {
+              setQuery(e.target.value)
+              setSelectedIndex(0)
+            }}
             placeholder="Search topics and sections..."
             className="flex-1 bg-transparent py-4 text-sm text-text placeholder-text-muted outline-none"
             aria-label="Search"

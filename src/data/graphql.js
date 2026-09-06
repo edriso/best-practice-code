@@ -391,8 +391,8 @@ const GET_USERS = gql\`
 \`;
 
 const CREATE_USER = gql\`
-  mutation CreateUser(\$input: CreateUserInput!) {
-    createUser(input: \$input) {
+  mutation CreateUser($input: CreateUserInput!) {
+    createUser(input: $input) {
       id
       name
       email
